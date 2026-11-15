@@ -105,60 +105,10 @@ message(glue("  tr_flags:    {tr_flags_path}"))
 message(glue("  cohort_rds:  {cohort_rds_path}"))
 message(glue("  output_dir:  {output_dir}\n"))
 
-# --- TR COLUMN MAP (from schema probe) ---------------------------------------
-# Source: .planning/schemas/202_schema_tr_treatment_cols_20261114.md
-# TUMOR_REGISTRY_ALL has no TR1/TR2/TR3 split: stratify by SOURCE (UFH/ORL/TMH).
-#
-# code_scheme (the meaning of 0 is OPPOSITE between the two schemes):
-#   reason_no : REASON_NO_* / R_N_* fields.  0 = treatment GIVEN; other codes =
-#               reason not given.
-#   naaccr_rx : NAACCR summary codes (*_CODE_SUMMARY, HORMONE_CODE, ...).
-#               00 = none; listed given_values = given (01-03 chemo, 01 immuno ...).
-#   rx_summ   : RX Summ fields (DRAD_SUM, DBRM_SUM, HTE_SUM).  0 = NONE.
-# Unknown codes (counted "unknown", never "not given"):
-CODE_UNKNOWN <- list(
-  reason_no = c(8L, 9L),
-  naaccr_rx = c(88L, 99L),
-  rx_summ   = c(8L, 9L, 88L, 99L)
-)
-
-tr_map_row <- function(source, trtype, date_col = NA_character_,
-                       code_col = NA_character_, code_scheme = NA_character_,
-                       given_values = integer(0)) {
-  tibble(source = source, trtype = trtype, date_col = date_col,
-         code_col = code_col, code_scheme = code_scheme,
-         given_values = list(as.integer(given_values)))
-}
-
-SCT_GIVEN <- c(10L, 11L, 12L, 20L)   # 10 BMT NOS; 11 auto; 12 allo; 20 SC harvest+infusion
-
-TR_MAP <- bind_rows(
-  # UFH (NAACCR summary items)
-  tr_map_row("UFH", "chemo",     "CHEMO_START_DATE_SUMMARY",       "CHEMO_CODE_SUMMARY",               "naaccr_rx", 1:3),
-  tr_map_row("UFH", "systemic",  "DATE_SYSTEMIC_THERAPY_STARTED"),
-  tr_map_row("UFH", "radiation", NA_character_,                    "REASON_NO_RADIATION",              "reason_no", 0L),
-  tr_map_row("UFH", "immuno",    "IMMUNO_START_DATE",              "IMMUNOTHERAPY_CODE",               "naaccr_rx", 1L),
-  tr_map_row("UFH", "sct",       NA_character_,                    "HEMATOLOGIC_TRANSPLANT_AND_ENDOC", "naaccr_rx", SCT_GIVEN),
-  tr_map_row("UFH", "hormone",   "HORMONE_START_DATE",             "HORMONE_CODE",                     "naaccr_rx", 1L),
-  # ORL (abstract-style)
-  tr_map_row("ORL", "chemo",     "DT_CHEMO",                       "R_N_CHEMO",                        "reason_no", 0L),
-  tr_map_row("ORL", "systemic",  "DT_SYS"),
-  tr_map_row("ORL", "radiation", "DT_RAD",                         "R_N_RAD",                          "reason_no", 0L),
-  tr_map_row("ORL", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
-  tr_map_row("ORL", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN),
-  tr_map_row("ORL", "hormone",   "DT_HORM",                        "R_N_HORM",                         "reason_no", 0L),
-  # TMH (15 TR rows; counts only, no sensitivity). DRAD_SUM: 0 = none; 8/9 unknown;
-  # the probe lists no "given" value for it, so given_values is empty.
-  tr_map_row("TMH", "chemo",     "DT_CHEMO"),
-  tr_map_row("TMH", "systemic",  "DT_SYS"),
-  tr_map_row("TMH", "radiation", NA_character_,                    "DRAD_SUM",                         "rx_summ"),
-  tr_map_row("TMH", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
-  tr_map_row("TMH", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN)
-)
-
-# Histology columns used to restrict to HL rows (same two columns and substr(1, 4)
-# rule as R/10_cohort_predicates.R:83,92; not listed in the 202 probe).
-TR_HIST_COLS <- c("HISTOLOGICAL_TYPE", "MORPH")
+# --- TR COLUMN MAP -----------------------------------------------------------
+# TR_MAP, CODE_UNKNOWN, SCT_GIVEN, tr_map_row() and TR_HIST_COLS moved to
+# R/utils/utils_cancer.R (shared with R/203). Probe:
+# .planning/schemas/202_schema_tr_treatment_cols_20261114.md
 
 # Treatment type -> label and Gantt treatment_type. systemic has no Gantt
 # counterpart (descriptive counts only). "Hormone" is an UNCONFIRMED Gantt label:
@@ -272,43 +222,13 @@ message("  HL rows by SOURCE: ",
         paste(names(table(tr_hl$SOURCE)), as.integer(table(tr_hl$SOURCE)), collapse = "; "))
 
 # --- SECTION 3b: PATIENT-LEVEL COLLAPSE --------------------------------------
-# Per map row (source x treatment type): row-level evidence on HL rows.
-#   row_given   = date present OR code in given_values
-#   row_unknown = code in the scheme's unknown codes (88, 99, 8, 9)
+# TR_MAP, tr_row_evidence() and collapse_evidence() now live in
+# R/utils/utils_cancer.R (shared with R/203) via build_tr_treatment_flags().
 # Per patient: tr_given = any HL row given; tr_first_date = earliest non-missing
 # date across HL rows; unknown (and not given) is "unknown", not "not_given".
-tr_row_evidence <- function(rows, map_row) {
-  src_rows <- rows |> filter(SOURCE == map_row$source)
-  n <- nrow(src_rows)
-  dt <- if (!is.na(map_row$date_col)) as.Date(src_rows[[map_row$date_col]]) else rep(as.Date(NA), n)
-  cd <- if (!is.na(map_row$code_col)) {
-    suppressWarnings(as.integer(as.character(src_rows[[map_row$code_col]])))
-  } else rep(NA_integer_, n)
-  unk_codes <- if (is.na(map_row$code_scheme)) integer(0) else CODE_UNKNOWN[[map_row$code_scheme]]
-  tibble(
-    ID = src_rows$ID, SOURCE = map_row$source, trtype = map_row$trtype,
-    row_date    = dt,
-    row_given   = !is.na(dt) | cd %in% unlist(map_row$given_values),
-    row_unknown = cd %in% unk_codes
-  )
-}
-
-collapse_evidence <- function(ev, by) {
-  ev |>
-    group_by(across(all_of(by))) |>
-    summarise(
-      tr_given       = any(row_given),
-      tr_unknown_any = any(row_unknown),
-      tr_first_date  = if (any(!is.na(row_date))) min(row_date, na.rm = TRUE) else as.Date(NA),
-      .groups = "drop"
-    ) |>
-    mutate(tr_status = case_when(tr_given ~ "given", tr_unknown_any ~ "unknown", TRUE ~ "not_given"))
-}
-
-tr_evidence <- bind_rows(lapply(seq_len(nrow(TR_MAP)), function(i) tr_row_evidence(tr_hl, TR_MAP[i, ])))
-tr_pt_src <- collapse_evidence(tr_evidence, c("ID", "SOURCE", "trtype"))              # per source (C, B)
-tr_pt_all <- collapse_evidence(filter(tr_evidence, SOURCE %in% SENS_SOURCES),
-                               c("ID", "trtype"))                                      # UFH+ORL (A, D, PPV)
+tr_pt_src <- build_tr_treatment_flags(sources = unique(TR_MAP$source), by_source = TRUE,
+                                      tr_hl = tr_hl)                    # per source (C, B)
+tr_pt_all <- build_tr_treatment_flags(sources = SENS_SOURCES, tr_hl = tr_hl)  # UFH+ORL (A, D, PPV)
 # Earliest TR diagnosis year per patient (HL rows; UFH DATE_OF_DIAGNOSIS, ORL/TMH DXDATE)
 tr_dx_year <- bind_rows(lapply(names(TR_DX_DATE_COLS), function(src) {
   col <- TR_DX_DATE_COLS[[src]]
@@ -611,6 +531,7 @@ message(glue("  D_by_year: {nrow(sheet_D)} rows"))
 message("=== Section 10b: E_coverage_window ===")
 open_pcornet_con()
 first_enc <- get_pcornet_table("ENCOUNTER") |>
+  filter(ADMIT_DATE >= !!ENC_DATE_SENTINEL_BEFORE) |>   # drop sentinel dates (e.g. 1901-01-01)
   group_by(ID) |>
   summarise(first_enc_date = min(ADMIT_DATE, na.rm = TRUE)) |>
   collect()
@@ -807,7 +728,8 @@ sheet_KEY <- tibble(
     paste0("Sensitivity restricted to TR treatment dates on/after the patient's first ENCOUNTER.ADMIT_DATE in the CDM (EHR coverage window). ",
            "Registry treatment dated before the first encounter cannot be in the pipeline by construction, so this removes pre-coverage dates. ",
            "TR-undated (code-only) rows cannot be placed against the window and are retained. ",
-           "Excluded patients (TR date before first encounter; no ENCOUNTER record) are counted per treatment type."),
+           "Excluded patients (TR date before first encounter; no ENCOUNTER record) are counted per treatment type. ",
+           "First encounter ignores sentinel ADMIT_DATE values before 1990-01-01 (guard added in quick task 261114-r5e); this can shift E counts slightly versus earlier runs."),
     "For pipeline captures, fraction with matching registry record (PPV direction; UFH + ORL)",
     paste0("No pipeline record of this type = TR given, no Gantt episode of that type. ",
            "Pipeline record > 90d BEFORE TR date = first Gantt episode more than 90 d earlier than the TR date. ",

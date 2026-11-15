@@ -346,3 +346,152 @@ build_tr_lymphoma_flags <- function(patient_ids) {
   attr(result, "unlisted_lymphoid") <- lymphoid_codes
   result
 }
+
+# ==============================================================================
+# TUMOR-REGISTRY FIRST-COURSE TREATMENT FLAGS (shared by R/202 and R/203)
+# ==============================================================================
+# Moved verbatim from R/202_tr_sensitivity.R (TR_MAP, CODE_UNKNOWN, SCT_GIVEN,
+# TR_HIST_COLS, tr_row_evidence, collapse_evidence). Source:
+# .planning/schemas/202_schema_tr_treatment_cols_20261114.md
+# TUMOR_REGISTRY_ALL has no TR1/TR2/TR3 split: stratify by SOURCE (UFH/ORL/TMH).
+#
+# code_scheme (the meaning of 0 is OPPOSITE between the two schemes):
+#   reason_no : REASON_NO_* / R_N_* fields.  0 = treatment GIVEN; other codes =
+#               reason not given.
+#   naaccr_rx : NAACCR summary codes (*_CODE_SUMMARY, HORMONE_CODE, ...).
+#               00 = none; listed given_values = given (01-03 chemo, 01 immuno ...).
+#   rx_summ   : RX Summ fields (DRAD_SUM, DBRM_SUM, HTE_SUM).  0 = NONE.
+# Unknown codes (counted "unknown", never "not given"):
+CODE_UNKNOWN <- list(
+  reason_no = c(8L, 9L),
+  naaccr_rx = c(88L, 99L),
+  rx_summ   = c(8L, 9L, 88L, 99L)
+)
+
+tr_map_row <- function(source, trtype, date_col = NA_character_,
+                       code_col = NA_character_, code_scheme = NA_character_,
+                       given_values = integer(0)) {
+  dplyr::tibble(source = source, trtype = trtype, date_col = date_col,
+                code_col = code_col, code_scheme = code_scheme,
+                given_values = list(as.integer(given_values)))
+}
+
+SCT_GIVEN <- c(10L, 11L, 12L, 20L)   # 10 BMT NOS; 11 auto; 12 allo; 20 SC harvest+infusion
+
+TR_MAP <- dplyr::bind_rows(
+  # UFH (NAACCR summary items)
+  tr_map_row("UFH", "chemo",     "CHEMO_START_DATE_SUMMARY",       "CHEMO_CODE_SUMMARY",               "naaccr_rx", 1:3),
+  tr_map_row("UFH", "systemic",  "DATE_SYSTEMIC_THERAPY_STARTED"),
+  tr_map_row("UFH", "radiation", NA_character_,                    "REASON_NO_RADIATION",              "reason_no", 0L),
+  tr_map_row("UFH", "immuno",    "IMMUNO_START_DATE",              "IMMUNOTHERAPY_CODE",               "naaccr_rx", 1L),
+  tr_map_row("UFH", "sct",       NA_character_,                    "HEMATOLOGIC_TRANSPLANT_AND_ENDOC", "naaccr_rx", SCT_GIVEN),
+  tr_map_row("UFH", "hormone",   "HORMONE_START_DATE",             "HORMONE_CODE",                     "naaccr_rx", 1L),
+  # ORL (abstract-style)
+  tr_map_row("ORL", "chemo",     "DT_CHEMO",                       "R_N_CHEMO",                        "reason_no", 0L),
+  tr_map_row("ORL", "systemic",  "DT_SYS"),
+  tr_map_row("ORL", "radiation", "DT_RAD",                         "R_N_RAD",                          "reason_no", 0L),
+  tr_map_row("ORL", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
+  tr_map_row("ORL", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN),
+  tr_map_row("ORL", "hormone",   "DT_HORM",                        "R_N_HORM",                         "reason_no", 0L),
+  # TMH (15 TR rows; counts only, no sensitivity). DRAD_SUM: 0 = none; 8/9 unknown;
+  # the probe lists no "given" value for it, so given_values is empty.
+  tr_map_row("TMH", "chemo",     "DT_CHEMO"),
+  tr_map_row("TMH", "systemic",  "DT_SYS"),
+  tr_map_row("TMH", "radiation", NA_character_,                    "DRAD_SUM",                         "rx_summ"),
+  tr_map_row("TMH", "immuno",    NA_character_,                    "DBRM_SUM",                         "rx_summ",   1L),
+  tr_map_row("TMH", "sct",       NA_character_,                    "HTE_SUM",                          "rx_summ",   SCT_GIVEN)
+)
+
+# Histology columns used to restrict to HL rows (same two columns and substr(1, 4)
+# rule as R/10_cohort_predicates.R:83,92; not listed in the 202 probe).
+TR_HIST_COLS <- c("HISTOLOGICAL_TYPE", "MORPH")
+
+# Row-level evidence for one TR_MAP row on HL rows of one SOURCE.
+#   row_given   = date present OR code in given_values
+#   row_unknown = code in the scheme's unknown codes (88, 99, 8, 9)
+tr_row_evidence <- function(rows, map_row) {
+  src_rows <- dplyr::filter(rows, SOURCE == map_row$source)
+  n <- nrow(src_rows)
+  dt <- if (!is.na(map_row$date_col)) as.Date(src_rows[[map_row$date_col]]) else rep(as.Date(NA), n)
+  cd <- if (!is.na(map_row$code_col)) {
+    suppressWarnings(as.integer(as.character(src_rows[[map_row$code_col]])))
+  } else rep(NA_integer_, n)
+  unk_codes <- if (is.na(map_row$code_scheme)) integer(0) else CODE_UNKNOWN[[map_row$code_scheme]]
+  dplyr::tibble(
+    ID = src_rows$ID, SOURCE = map_row$source, trtype = map_row$trtype,
+    row_date    = dt,
+    row_given   = !is.na(dt) | cd %in% unlist(map_row$given_values),
+    row_unknown = cd %in% unk_codes
+  )
+}
+
+# Patient-level collapse: tr_given = any HL row given; tr_first_date = earliest
+# non-missing date across HL rows; unknown (and not given) is "unknown", never
+# "not_given".
+collapse_evidence <- function(ev, by) {
+  ev |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(by))) |>
+    dplyr::summarise(
+      tr_given      = any(row_given),
+      tr_unknown    = any(row_unknown),
+      tr_first_date = if (any(!is.na(row_date))) min(row_date, na.rm = TRUE) else as.Date(NA),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(tr_status = dplyr::case_when(tr_given ~ "given", tr_unknown ~ "unknown",
+                                               TRUE ~ "not_given"))
+}
+
+#' TR first-course treatment flags: one row per patient x treatment type
+#'
+#' @param ids Optional character vector; restrict to these patient IDs.
+#' @param sources TR SOURCE values to include (default UFH + ORL, the two sources
+#'   with sensitivity-grade fields; TMH has counts only).
+#' @param by_source If TRUE, also stratify by SOURCE (one row per patient x source
+#'   x type).
+#' @param tr_hl Optional pre-loaded HL-histology rows of TUMOR_REGISTRY_ALL
+#'   (columns ID, SOURCE and the TR_MAP columns). NULL = load from DuckDB (own
+#'   open/close of the shared connection).
+#' @return tibble: ID, [SOURCE], trtype, tr_given (lgl), tr_unknown (lgl),
+#'   tr_first_date (Date), tr_status ("given" / "unknown" / "not_given").
+build_tr_treatment_flags <- function(ids = NULL, sources = c("UFH", "ORL"),
+                                     by_source = FALSE, tr_hl = NULL) {
+  if (is.null(tr_hl)) {
+    open_pcornet_con()
+    tr_tbl_raw  <- get_pcornet_table("TUMOR_REGISTRY_ALL")
+    tr_all_cols <- colnames(tr_tbl_raw)
+    map_cols <- unique(stats::na.omit(c(TR_MAP$date_col, TR_MAP$code_col)))
+    missing_map_cols <- setdiff(map_cols, tr_all_cols)
+    hist_present <- intersect(TR_HIST_COLS, tr_all_cols)
+    if (length(missing_map_cols) > 0L || !"SOURCE" %in% tr_all_cols ||
+        length(hist_present) == 0L) {
+      close_pcornet_con()
+      stop("[build_tr_treatment_flags] TUMOR_REGISTRY_ALL missing columns: ",
+           paste(c(missing_map_cols,
+                   if (!"SOURCE" %in% tr_all_cols) "SOURCE",
+                   if (length(hist_present) == 0L) "histology"), collapse = ", "))
+    }
+    tr_data <- tr_tbl_raw |>
+      dplyr::select(dplyr::all_of(unique(c("ID", "SOURCE", hist_present, map_cols)))) |>
+      dplyr::collect()
+    close_pcornet_con()
+    tr_hl <- dplyr::filter(
+      tr_data,
+      dplyr::if_any(dplyr::all_of(hist_present),
+                    ~ substr(as.character(.x), 1, 4) %in% ICD_CODES$hl_histology))
+  }
+  tr_hl <- dplyr::mutate(tr_hl, ID = as.character(ID))
+  if (!is.null(ids)) tr_hl <- dplyr::filter(tr_hl, ID %in% as.character(ids))
+  map_use <- dplyr::filter(TR_MAP, source %in% sources)
+  ev <- dplyr::bind_rows(lapply(seq_len(nrow(map_use)),
+                                function(i) tr_row_evidence(tr_hl, map_use[i, ])))
+  if (nrow(ev) == 0L) {
+    ev <- dplyr::tibble(ID = character(), SOURCE = character(), trtype = character(),
+                        row_date = as.Date(character()), row_given = logical(),
+                        row_unknown = logical())
+  }
+  collapse_evidence(ev, if (by_source) c("ID", "SOURCE", "trtype") else c("ID", "trtype"))
+}
+
+# ENCOUNTER.ADMIT_DATE values before this date are sentinels (e.g. 1901-01-01),
+# not real encounters. Excluded from first/last-encounter computations.
+ENC_DATE_SENTINEL_BEFORE <- as.Date("1990-01-01")

@@ -1,18 +1,24 @@
 # ==============================================================================
 # Script:  203_no_treatment_characterization.R
 # Phase:   203 — no-treatment-patient-characterization
-# Purpose: Split confirmed_hl_cohort.rds into a no-treatment group
-#          (0 captured treatment episodes) and a treated group (>=1 episode);
-#          profile both side by side across NOTX-01..NOTX-05 tables.
+# Purpose: Split confirmed_hl_cohort.rds into a no-treatment group (no Gantt
+#          treatment episode) and a treated group; profile both side by side and
+#          explain the no-treatment group with a first-match reason waterfall.
 #          No cohort-membership change — the split is analytic-only.
-# Inputs:  confirmed_hl_cohort.rds       (env R203_COHORT_RDS)
-#          gantt_episodes_180.csv        (env R203_GANTT180_CSV)
-#          single_source_care RDS/R169   (env R203_R169_RDS)
-#          tr_lymphoma_flags RDS/R193    (env R203_TRFLAGS_RDS)
+# Schema:  .planning/schemas/203_schema_inputs_20261114.md (HiPerGator probe).
+#          Every column name below comes from that file.
+# Inputs:  confirmed_hl_cohort.rds        (env R203_COHORT_RDS)
+#          gantt_episodes_180.csv         (env R203_GANTT180_CSV)
+#          single_source_care_*.rds R/169 (env R203_R169_RDS; excludes *_parts_*)
+#          tr_lymphoma_flags_all_patients (env R203_TRFLAGS_RDS; rds, else csv)
+#          enc_far_from_care.rds          (env R203_FARCARE_RDS)
+#          DuckDB: DIAGNOSIS, ENCOUNTER, TUMOR_REGISTRY_ALL; payer_summary
 # Outputs: output/203_no_treatment_characterization_<date>.xlsx
 #            (KEY, A_profile, B_reasons_waterfall, C_by_source,
 #             D_candidate_rules, QC)
 #          output/internal/203_no_treatment_characterization_<date>.rds  (patient-level)
+# Run:     module load R/4.5; R --no-save
+#          source("R/203_no_treatment_characterization.R", local = new.env(parent = globalenv()))
 # ==============================================================================
 
 # ==============================================================================
@@ -20,6 +26,7 @@
 # ==============================================================================
 
 source(here::here("R", "00_config.R"), local = FALSE)
+source(here::here("R", "utils", "utils_tr_sensitivity.R"))  # tr_flag_to_logical()
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -29,809 +36,546 @@ suppressPackageStartupMessages({
   library(glue)
   library(here)
   library(openxlsx)
+  library(vroom)
 })
 
 RUN_DATE <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
 message(glue("==== R/203 no_treatment_characterization -- RUN DATE {RUN_DATE} ===="))
 
-# ==============================================================================
-# SECTION 1: IS_LOCAL GUARD ----
-# ==============================================================================
-# confirmed_hl_cohort.rds and all Phase 203 inputs exist only on HiPerGator.
-# The script parses locally but stops before reading any data.
+# Small-cell suppression: counts 1-10 -> "<11" (same as R/202 fmt_sup).
+fmt_sup <- function(n) {
+  if (is.na(n)) return(NA_character_)
+  n <- as.integer(n)
+  if (n >= 1L & n <= 10L) "<11" else format(n, big.mark = ",")
+}
+sup_col <- function(x) vapply(x, fmt_sup, character(1))
+pct_sup <- function(num, den) {
+  ifelse(!is.na(num) & num >= 11L & den >= 11L, sprintf("%.1f%%", 100 * num / den), "")
+}
 
-R203_LOCAL_CHECK_PATH <- Sys.getenv(
-  "R203_COHORT_RDS",
-  unset = "/blue/erin.mobley-hl.bcu/insurance_investigation/output/internal/confirmed_hl_cohort.rds"
-)
-R203_RUN_LOCAL <- !file.exists(R203_LOCAL_CHECK_PATH)
+need_cols <- function(df, cols, what) {
+  miss <- setdiff(cols, names(df))
+  if (length(miss) > 0L)
+    stop("[R203] ", what, ": missing columns ", paste(miss, collapse = ", "),
+         ". Available: ", paste(sort(names(df)), collapse = ", "))
+  invisible(df)
+}
 
-if (R203_RUN_LOCAL) {
-  stop(paste0(
-    "Phase 203 requires HiPerGator data — run in interactive R/4.5 session. ",
-    "File not found: ", R203_LOCAL_CHECK_PATH
-  ))
+# duck_query: open, query, close in one helper (single shared connection;
+# close with close_pcornet_con(), never DBI::dbDisconnect).
+duck_query <- function(sql) {
+  open_pcornet_con()
+  on.exit(try(close_pcornet_con(), silent = TRUE), add = TRUE)
+  DBI::dbGetQuery(pcornet_con, sql)
 }
 
 # ==============================================================================
-# SECTION 2: PINNED INPUTS ----
-# Column names confirmed in .planning/schemas/203_schema_<date>.md (probe on
-# HiPerGator). Do NOT change column references without updating that probe file.
+# SECTION 1: PINNED INPUTS ----
+# Env var overrides; otherwise the dated/newest-by-name default below. "Newest"
+# means last in sorted file names (dates are in the names), never file.mtime.
 # ==============================================================================
 
-COHORT_RDS <- Sys.getenv(
-  "R203_COHORT_RDS",
-  unset = "/blue/erin.mobley-hl.bcu/insurance_investigation/output/internal/confirmed_hl_cohort.rds"
-)
-if (!file.exists(COHORT_RDS))
-  stop("[R203] R203_COHORT_RDS not found: ", COHORT_RDS)
+newest_by_name <- function(dir, pattern, exclude = NULL) {
+  f <- list.files(dir, pattern = pattern, full.names = TRUE)
+  if (!is.null(exclude)) f <- f[!grepl(exclude, basename(f))]
+  if (length(f) == 0L) return(NA_character_)
+  sort(f)[length(f)]
+}
+pin <- function(env, default) {
+  v <- Sys.getenv(env, unset = "")
+  list(path = if (nzchar(v)) v else default, pinned = nzchar(v))
+}
+must_exist <- function(p, env) {
+  if (is.na(p$path) || !file.exists(p$path))
+    stop("[R203] input not found for ", env, ": ", p$path,
+         ". Set ", env, " to an existing file.")
+  p
+}
 
-GANTT180_CSV <- Sys.getenv(
-  "R203_GANTT180_CSV",
-  unset = file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
-)
-if (!file.exists(GANTT180_CSV))
-  stop("[R203] R203_GANTT180_CSV not found: ", GANTT180_CSV)
+internal_dir <- file.path(CONFIG$output_dir, "internal")
 
-R169_RDS <- Sys.getenv(
-  "R203_R169_RDS",
-  unset = "/blue/erin.mobley-hl.bcu/insurance_investigation/output/internal/single_source_care_20261013.rds"
-)
-if (!file.exists(R169_RDS))
-  stop("[R203] R203_R169_RDS not found: ", R169_RDS)
+pin_cohort <- must_exist(pin("R203_COHORT_RDS",
+  file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds")), "R203_COHORT_RDS")
+pin_gantt  <- must_exist(pin("R203_GANTT180_CSV",
+  file.path(CONFIG$output_dir, "gantt_episodes_180.csv")), "R203_GANTT180_CSV")
+pin_r169   <- must_exist(pin("R203_R169_RDS",
+  newest_by_name(internal_dir, "^single_source_care_.*\\.rds$", exclude = "_parts_")),
+  "R203_R169_RDS")
+pin_trflags <- must_exist(pin("R203_TRFLAGS_RDS", {
+  rds <- newest_by_name(internal_dir, "^tr_lymphoma_flags_all_patients_.*\\.rds$")
+  if (!is.na(rds)) rds else
+    newest_by_name(CONFIG$output_dir, "^tr_lymphoma_flags_all_patients_.*\\.csv$")
+}), "R203_TRFLAGS_RDS")
+pin_far    <- must_exist(pin("R203_FARCARE_RDS",
+  file.path(CONFIG$output_dir, "enc_far_from_care.rds")), "R203_FARCARE_RDS")
 
-TRFLAGS_RDS <- Sys.getenv(
-  "R203_TRFLAGS_RDS",
-  unset = "/blue/erin.mobley-hl.bcu/insurance_investigation/output/internal/tr_lymphoma_flags_all_patients_20261113.rds"
-)
-if (!file.exists(TRFLAGS_RDS))
-  stop("[R203] R203_TRFLAGS_RDS not found: ", TRFLAGS_RDS)
-
-# Record pin info for the KEY sheet (populated in a later plan).
-pin_info <- list(
-  cohort_rds   = list(path = COHORT_RDS,    pinned = nzchar(Sys.getenv("R203_COHORT_RDS"))),
-  gantt180_csv = list(path = GANTT180_CSV,  pinned = nzchar(Sys.getenv("R203_GANTT180_CSV"))),
-  r169_rds     = list(path = R169_RDS,      pinned = nzchar(Sys.getenv("R203_R169_RDS"))),
-  trflags_rds  = list(path = TRFLAGS_RDS,   pinned = nzchar(Sys.getenv("R203_TRFLAGS_RDS")))
-)
+pin_info <- list(cohort_rds = pin_cohort, gantt180_csv = pin_gantt, r169_rds = pin_r169,
+                 trflags = pin_trflags, farcare_rds = pin_far)
 message("[R203] Pin status:")
 for (nm in names(pin_info))
   message(glue("  {nm}: {pin_info[[nm]]$path}  [pinned={pin_info[[nm]]$pinned}]"))
 
 # ==============================================================================
-# SECTION 3: READ CONFIRMED COHORT ----
+# SECTION 2: LOAD COHORT + GANTT; SPLIT POPULATIONS ----
 # ==============================================================================
 
-cohort <- readRDS(COHORT_RDS)
-message(glue("[R203] Cohort loaded: {nrow(cohort)} rows, {ncol(cohort)} columns"))
+TX_TYPES <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT", "Proton Therapy")
+EXPECTED_NO_TX   <- 3246L
+EXPECTED_TREATED <- 4450L
+POP_TOLERANCE    <- 50L
 
-# Treatment-episode count column.
-# Confirm exact name against .planning/schemas/203_schema_<date>.md once probe
-# runs; candidate name below is used throughout this script.
-TX_COUNT_COL <- "n_treatment_episodes"
-if (!TX_COUNT_COL %in% names(cohort))
-  stop(
-    "[R203] TX_COUNT_COL '", TX_COUNT_COL, "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(names(cohort), collapse = ", ")
-  )
+cohort <- readRDS(pin_cohort$path)
+need_cols(cohort, c("ID", "first_hl_dx_date", "first_hl_dx_source"), "confirmed_hl_cohort.rds")
+cohort <- cohort |>
+  transmute(ID = as.character(ID), first_hl_dx_date = as.Date(first_hl_dx_date),
+            first_hl_dx_source)
+message(glue("[R203] Cohort: {nrow(cohort)} rows, {n_distinct(cohort$ID)} distinct IDs"))
 
-# ==============================================================================
-# SECTION 4: COHORT SPLIT ----
-# No cohort rows are removed or altered beyond this analytic split (NOTX design
-# constraint). group label is for display only.
-# ==============================================================================
+# Gantt key is patient_id; renamed to ID once, here.
+gantt <- vroom(
+  pin_gantt$path,
+  col_select = c(patient_id, treatment_type, age_at_episode),
+  col_types = cols_only(patient_id = col_character(), treatment_type = col_character(),
+                        age_at_episode = col_integer()),
+  show_col_types = FALSE
+) |>
+  rename(ID = patient_id)
+message(glue("[R203] Gantt: {nrow(gantt)} rows, {n_distinct(gantt$ID)} distinct IDs"))
 
-no_tx   <- cohort %>% filter(.data[[TX_COUNT_COL]] == 0) %>%
-             mutate(group = "no_treatment")
-treated <- cohort %>% filter(.data[[TX_COUNT_COL]] >= 1) %>%
-             mutate(group = "treated")
+gantt_tx_ids  <- unique(gantt$ID[gantt$treatment_type %in% TX_TYPES])
+gantt_all_ids <- unique(gantt$ID)
 
-message(glue(
-  "[R203] no_tx: {nrow(no_tx)} patients; treated: {nrow(treated)} patients; ",
-  "total {nrow(cohort)}"
-))
-stopifnot(
-  "Split must be exhaustive and non-overlapping" =
-    nrow(no_tx) + nrow(treated) == nrow(cohort)
-)
+cohort <- cohort |>
+  mutate(group = if_else(ID %in% gantt_tx_ids, "treated", "no_treatment"))
+n_notx    <- sum(cohort$group == "no_treatment")
+n_treated <- sum(cohort$group == "treated")
+message(glue("[R203] no_tx {n_notx}; treated {n_treated}; total {nrow(cohort)}"))
+stopifnot("Split must be exhaustive and non-overlapping" = n_notx + n_treated == nrow(cohort))
 
-# ==============================================================================
-# SECTION 5: NOTX-01 — DATA-WINDOW TRUNCATION (Plan 203-02) ----
-# Column names confirmed in .planning/schemas/203_schema_<date>.md (probe on
-# HiPerGator). Stop with available names if absent (never guess column names).
-# ==============================================================================
+pop_ok <- abs(n_notx - EXPECTED_NO_TX) <= POP_TOLERANCE &&
+  abs(n_treated - EXPECTED_TREATED) <= POP_TOLERANCE
+if (!pop_ok)
+  warning(glue("[R203] population counts outside expected {EXPECTED_NO_TX}/{EXPECTED_TREATED} ",
+               "+/- {POP_TOLERANCE}: got {n_notx}/{n_treated}"))
 
-# Named config constants (ABVD_CONCURRENT_WINDOW_DAYS-style convention).
-PERI_DX_WINDOW_DAYS <- 90L
+# Non-cohort Gantt patients: reported in QC only.
+n_death_only <- length(setdiff(setdiff(gantt_all_ids, cohort$ID), gantt_tx_ids))
+n_tx_only    <- length(setdiff(gantt_tx_ids, cohort$ID))
+message(glue("[R203] not in cohort: death-only {n_death_only} (expect 166); ",
+             "tx-only {n_tx_only} (expect 558)"))
 
-# Enrollment/first-encounter date column — candidate name from probe placeholder.
-# Update WINDOW_START_COL once 203_schema_<date>.md is written by probe_inputs().
-WINDOW_START_COL <- "enr_start_date"
-if (!WINDOW_START_COL %in% names(cohort))
-  stop(
-    "[R203] WINDOW_START_COL '", WINDOW_START_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# NLPHL indicator column — candidate name from probe placeholder.
-NLPHL_COL <- "is_nlphl"
-if (!NLPHL_COL %in% names(cohort))
-  stop(
-    "[R203] NLPHL_COL '", NLPHL_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# Age-at-dx column — candidate name from probe placeholder.
-AGE_DX_COL <- "age_at_dx"
-if (!AGE_DX_COL %in% names(cohort))
-  stop(
-    "[R203] AGE_DX_COL '", AGE_DX_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# Payer category column — candidate name from probe placeholder.
-PAYER_CAT_COL <- "payer_cat"
-if (!PAYER_CAT_COL %in% names(cohort))
-  stop(
-    "[R203] PAYER_CAT_COL '", PAYER_CAT_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# Far-from-care column — candidate name from probe placeholder.
-FAR_COL <- "far_from_care_100mi"
-if (!FAR_COL %in% names(cohort))
-  stop(
-    "[R203] FAR_COL '", FAR_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# SOURCE / primary partner site column — candidate name from probe placeholder.
-SOURCE_COL <- "SOURCE"
-if (!SOURCE_COL %in% names(cohort))
-  stop(
-    "[R203] SOURCE_COL '", SOURCE_COL,
-    "' not found in confirmed_hl_cohort.rds. ",
-    "Available columns: ", paste(sort(names(cohort)), collapse = ", ")
-  )
-
-# Build a combined frame keyed by ID with group label for NOTX-01..NOTX-04.
-# Start from the full cohort (no_tx + treated both needed — NOTX-06).
-char_pt <- dplyr::bind_rows(no_tx, treated) %>%
-  dplyr::select(
-    ID, group, first_hl_dx_date,
-    dplyr::all_of(c(WINDOW_START_COL, NLPHL_COL, AGE_DX_COL,
-                    PAYER_CAT_COL, FAR_COL, SOURCE_COL))
-  )
-
-# NOTX-01: data-window truncation flag.
-# window_truncated = TRUE  when first_hl_dx_date precedes the enrollment start.
-# window_date_missing = TRUE when either date is NA (computed first; fed to ifelse).
-char_pt <- char_pt %>%
-  dplyr::mutate(
-    window_date_missing = is.na(first_hl_dx_date) | is.na(.data[[WINDOW_START_COL]]),
-    window_truncated    = dplyr::if_else(
-      window_date_missing,
-      FALSE,
-      first_hl_dx_date < .data[[WINDOW_START_COL]]
-    )
-  )
-
-notx01_summary <- char_pt %>%
-  dplyr::group_by(group) %>%
-  dplyr::summarise(
-    n_patients          = dplyr::n(),
-    n_window_truncated  = sum(window_truncated, na.rm = TRUE),
-    n_window_date_missing = sum(window_date_missing, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-message("[R203 NOTX-01] window_truncated summary:")
-print(notx01_summary)
+# Age at dx: Gantt HL Diagnosis row (age_at_episode), one per patient.
+age_dx <- gantt |>
+  filter(treatment_type == "HL Diagnosis") |>
+  group_by(ID) |>
+  summarise(age_at_dx = suppressWarnings(min(age_at_episode, na.rm = TRUE)), .groups = "drop") |>
+  mutate(age_at_dx = if_else(is.finite(age_at_dx), age_at_dx, NA_integer_))
+rm(gantt)
 
 # ==============================================================================
-# SECTION 6: NOTX-02 — PERI-DIAGNOSIS ENCOUNTER COUNTS (Plan 203-02) ----
-# DuckDB: query ENCOUNTER(ID, ADMIT_DATE); close connection before any other
-# open_pcornet_con() call. Inequality join in R (same shape as R/180
-# any_enc_year, R/180_cbc_missing_capture.R lines 558-562).
+# SECTION 3: DERIVE CHARACTERIZATION VARIABLES (schema section 5) ----
 # ==============================================================================
 
-open_pcornet_con()   # single shared connection (utils_duckdb.R line 128)
-enc_all <- duck_query(
+# --- NLPHL (DIAGNOSIS + classify_codes) and encounter dates (ENCOUNTER) -------
+# Own query helper calls; IDs joined in R (no IN() lists). Encounter dates before
+# ENC_DATE_SENTINEL_BEFORE (1990-01-01) are sentinels and excluded.
+NLPHL_LABEL    <- "NLPHL"
+HL_OTHER_LABEL <- "Hodgkin Lymphoma (non-NLPHL)"
+
+dx_rows <- duck_query(
+  "SELECT DISTINCT CAST(ID AS VARCHAR) AS ID, DX
+   FROM DIAGNOSIS
+   WHERE DX LIKE 'C81%' OR DX LIKE '201%'"
+) |> mutate(ID = as.character(ID), site = classify_codes(DX)) |>
+  filter(site %in% c(NLPHL_LABEL, HL_OTHER_LABEL))
+
+nlphl_pt <- dx_rows |>
+  group_by(ID) |>
+  summarise(has_hl_dx_rows = TRUE,
+            nlphl_any  = any(site == NLPHL_LABEL),
+            nlphl_only = any(site == NLPHL_LABEL) && !any(site == HL_OTHER_LABEL),
+            .groups = "drop")
+rm(dx_rows)
+
+enc_pt <- duck_query(glue(
   "SELECT CAST(ID AS VARCHAR) AS ID,
-          TRY_CAST(ADMIT_DATE AS DATE) AS admit_date
+          MIN(TRY_CAST(ADMIT_DATE AS DATE)) AS first_enc_date,
+          MAX(TRY_CAST(ADMIT_DATE AS DATE)) AS last_enc_date
    FROM ENCOUNTER
-   WHERE ADMIT_DATE IS NOT NULL"
-)
-close_pcornet_con()  # always close with close_pcornet_con() (see utils_duckdb.R)
+   WHERE TRY_CAST(ADMIT_DATE AS DATE) >= DATE '{format(ENC_DATE_SENTINEL_BEFORE)}'
+   GROUP BY ID"
+)) |> mutate(ID = as.character(ID),
+             first_enc_date = as.Date(first_enc_date), last_enc_date = as.Date(last_enc_date))
+message(glue("[R203] DIAGNOSIS HL patients {nrow(nlphl_pt)}; ENCOUNTER patients {nrow(enc_pt)}"))
 
-enc_all <- enc_all %>%
-  dplyr::mutate(ID = as.character(ID))
+# --- Single-source care (R/169 tibble) -----------------------------------------
+ssc <- readRDS(pin_r169$path)
+if (!is.data.frame(ssc))
+  stop("[R203] R169 input is not a data frame (a *_parts_* list file?): ", pin_r169$path)
+need_cols(ssc, c("ID", "single_source_care", "primary_source"), "R/169 single_source_care")
+ssc <- ssc |>
+  transmute(ID = as.character(ID), single_source_care = as.integer(single_source_care),
+            primary_source)
 
-# Per-patient window bounds.
-pt_windows <- char_pt %>%
-  dplyr::select(ID, first_hl_dx_date) %>%
-  dplyr::mutate(
-    win_lo = first_hl_dx_date - PERI_DX_WINDOW_DAYS,
-    win_hi = first_hl_dx_date + PERI_DX_WINDOW_DAYS
-  ) %>%
-  dplyr::filter(!is.na(first_hl_dx_date))
+# --- Far from care (patient-level rollup of enc_far_from_care.rds) -------------
+far_enc <- readRDS(pin_far$path)
+need_cols(far_enc, c("ID", "far_from_care_100mi", "post_anchor", "distance_mi"),
+          "enc_far_from_care.rds")
+far_pt <- far_enc |>
+  transmute(ID = as.character(ID), far = as.integer(far_from_care_100mi),
+            post = as.integer(post_anchor), distance_mi) |>
+  group_by(ID) |>
+  summarise(far_any_post = any(far == 1L & post == 1L, na.rm = TRUE),
+            median_distance_mi_post = if (any(post == 1L, na.rm = TRUE))
+              median(distance_mi[post %in% 1L], na.rm = TRUE) else NA_real_,
+            .groups = "drop")
+rm(far_enc)
 
-# Inequality join: same shape as R/180_cbc_missing_capture.R lines 558-562.
-# Keeps encounters where admit_date is within [first_hl_dx_date - 90,
-# first_hl_dx_date + 90].
-peri_dx_enc <- pt_windows %>%
-  dplyr::inner_join(
-    enc_all,
-    by = dplyr::join_by(ID, win_lo <= admit_date, win_hi >= admit_date)
-  )
+# --- Payer: load_payer_summary() returns ID + PAYER_CATEGORY_PRIMARY (already the
+# patient-level payer category). classify_payer_tier() needs encounter-level
+# PAYER_TYPE_PRIMARY/SECONDARY/SOURCE, so it does not apply to this input; the
+# category is reported as stored.
+payer <- load_payer_summary(cohort$ID)
+payer_path <- attr(payer, "source_path")
+payer <- payer |> transmute(ID = as.character(ID), payer_category = PAYER_CATEGORY_PRIMARY)
 
-n_enc_per_pt <- peri_dx_enc %>%
-  dplyr::count(ID, name = "n_enc_peri_dx")
-
-# Join back; patients with no peri-dx encounters get 0 (not NA).
-char_pt <- char_pt %>%
-  dplyr::left_join(n_enc_per_pt, by = "ID") %>%
-  dplyr::mutate(
-    n_enc_peri_dx = dplyr::coalesce(n_enc_peri_dx, 0L)
-  )
-
-# Summarize per group: 0 | 1 | 2-4 | 5-9 | 10+ encounter bands.
-enc_band <- function(n) {
-  dplyr::case_when(
-    n == 0L         ~ "0",
-    n == 1L         ~ "1",
-    n <= 4L         ~ "2-4",
-    n <= 9L         ~ "5-9",
-    TRUE            ~ "10+"
-  )
+# --- TR flags (tr_hl_dx / tr_nhl_dx) -------------------------------------------
+tr_flags <- if (grepl("\\.rds$", pin_trflags$path, ignore.case = TRUE)) {
+  readRDS(pin_trflags$path)
+} else {
+  vroom(pin_trflags$path, col_types = cols(.default = col_character()), show_col_types = FALSE)
 }
+need_cols(tr_flags, c("ID", "tr_hl_dx", "tr_nhl_dx"), "tr_lymphoma_flags_all_patients")
+tr_flags <- tr_flags |>
+  transmute(ID = as.character(ID), tr_hl_dx = tr_flag_to_logical(tr_hl_dx),
+            tr_nhl_dx = tr_flag_to_logical(tr_nhl_dx))
 
-notx02_summary <- char_pt %>%
-  dplyr::mutate(enc_band = enc_band(n_enc_peri_dx)) %>%
-  dplyr::count(group, enc_band) %>%
-  dplyr::arrange(group, enc_band)
-
-message("[R203 NOTX-02] peri-dx encounter bands per group:")
-print(notx02_summary)
+# --- TR first-course treatment (shared function, R/utils/utils_cancer.R) --------
+# Types that map to a pipeline treatment type (Chemotherapy, Immunotherapy,
+# Radiation incl. proton, SCT). Hormone/systemic have no Gantt counterpart.
+TR_NOTX_TYPES <- c("chemo", "radiation", "immuno", "sct")
+tr_tx <- build_tr_treatment_flags(ids = cohort$ID)
+tr_tx_pt <- tr_tx |>
+  filter(trtype %in% TR_NOTX_TYPES) |>
+  group_by(ID) |>
+  summarise(tr_any_tx_given = any(tr_given), tr_any_tx_unknown = any(tr_unknown),
+            .groups = "drop")
+message(glue("[R203] TR treatment flags: {nrow(tr_tx)} patient x type rows; ",
+             "{n_distinct(tr_tx$ID)} patients with HL TR rows"))
 
 # ==============================================================================
-# SECTION 7: NOTX-03 — DEMOGRAPHIC / CARE CHARACTERIZATION (Plan 203-02) ----
-# Join R/169 single_source_care; derive age_group_dx and hl_subtype.
+# SECTION 4: ASSEMBLE PATIENT-LEVEL FRAME ----
 # ==============================================================================
 
-ssc <- readRDS(R169_RDS) %>%
-  dplyr::select(ID, single_source_care, single_source_care_post, primary_source) %>%
-  dplyr::mutate(ID = as.character(ID))
-
-char_pt <- char_pt %>%
-  dplyr::left_join(ssc, by = "ID")
-
-# age_group_dx: 0-17, 18-39, 40-59, 60+ (from AGE_DX_COL).
-char_pt <- char_pt %>%
-  dplyr::mutate(
-    age_group_dx = dplyr::case_when(
-      .data[[AGE_DX_COL]] < 18  ~ "0-17",
-      .data[[AGE_DX_COL]] < 40  ~ "18-39",
-      .data[[AGE_DX_COL]] < 60  ~ "40-59",
-      !is.na(.data[[AGE_DX_COL]]) ~ "60+",
-      TRUE                       ~ NA_character_
+char_pt <- cohort |>
+  left_join(age_dx,   by = "ID") |>
+  left_join(nlphl_pt, by = "ID") |>
+  left_join(enc_pt,   by = "ID") |>
+  left_join(ssc,      by = "ID") |>
+  left_join(far_pt,   by = "ID") |>
+  left_join(payer,    by = "ID") |>
+  left_join(tr_flags, by = "ID") |>
+  left_join(tr_tx_pt, by = "ID") |>
+  mutate(
+    has_hl_dx_rows = coalesce(has_hl_dx_rows, FALSE),
+    nlphl_any      = coalesce(nlphl_any, FALSE),
+    nlphl_only     = coalesce(nlphl_only, FALSE),
+    followup_days  = as.integer(last_enc_date - first_hl_dx_date),
+    age_group_dx = case_when(
+      is.na(age_at_dx) ~ NA_character_,
+      age_at_dx < 18   ~ "0-17",
+      age_at_dx < 40   ~ "18-39",
+      age_at_dx < 60   ~ "40-59",
+      TRUE             ~ "60+"
     ),
-    hl_subtype = dplyr::if_else(
-      .data[[NLPHL_COL]] %in% TRUE, "NLPHL", "cHL"
+    hl_subtype = case_when(
+      nlphl_only     ~ "NLPHL only",
+      nlphl_any      ~ "NLPHL + other HL codes",
+      has_hl_dx_rows ~ "cHL only",
+      TRUE           ~ "No HL code in DIAGNOSIS"
+    ),
+    followup_band = case_when(
+      is.na(followup_days) ~ NA_character_,
+      followup_days < 180  ~ "<180d",
+      followup_days < 730  ~ "180-729d",
+      followup_days < 1825 ~ "730-1824d",
+      TRUE                 ~ "1825d+"
+    ),
+    far_from_care = case_when(
+      is.na(far_any_post) ~ NA_character_,
+      far_any_post        ~ "far (>100 mi, post-anchor)",
+      TRUE                ~ "not far"
+    ),
+    single_source_lbl = case_when(
+      is.na(single_source_care) ~ NA_character_,
+      single_source_care == 1L  ~ "single source",
+      TRUE                      ~ "multi source"
     )
-  )
+  ) |>
+  add_notx_flags()
 
-# Per-group summaries for each NOTX-03 characteristic (counts only; suppression
-# deferred to Plan 203-03 per CLAUDE.md suppress-after-arithmetic rule).
-notx03_ssc <- char_pt %>%
-  dplyr::count(group, single_source_care, name = "n")
+char_pt$notx_reason <- ifelse(char_pt$group == "no_treatment",
+                              as.character(assign_notx_reason(char_pt)), NA_character_)
+char_pt$notx_reason <- factor(char_pt$notx_reason, levels = NOTX_REASON_LEVELS)
 
-notx03_payer <- char_pt %>%
-  dplyr::count(group, .data[[PAYER_CAT_COL]], name = "n")
+stopifnot(nrow(char_pt) == nrow(cohort), !anyDuplicated(char_pt$ID))
+message(glue("[R203] char_pt: {nrow(char_pt)} rows, {ncol(char_pt)} columns"))
 
-notx03_far <- char_pt %>%
-  dplyr::count(group, .data[[FAR_COL]], name = "n")
-
-notx03_age <- char_pt %>%
-  dplyr::count(group, age_group_dx, name = "n")
-
-notx03_subtype <- char_pt %>%
-  dplyr::count(group, hl_subtype, name = "n")
-
-notx03_source <- char_pt %>%
-  dplyr::count(group, .data[[SOURCE_COL]], name = "n")
-
-message("[R203 NOTX-03] single_source_care counts:")
-print(notx03_ssc)
-message("[R203 NOTX-03] payer counts:")
-print(notx03_payer)
-message("[R203 NOTX-03] far_from_care counts:")
-print(notx03_far)
-message("[R203 NOTX-03] age_group_dx counts:")
-print(notx03_age)
-message("[R203 NOTX-03] hl_subtype counts:")
-print(notx03_subtype)
-
-# ==============================================================================
-# SECTION 8: NOTX-04 — REGISTRY TREATMENT JOIN (Plan 203-02) ----
-# Join R/193 TR flags; derive registry_tx_given and
-# registry_says_tx_pipeline_missed stratum.
-# ==============================================================================
-
-trflags <- readRDS(TRFLAGS_RDS) %>%
-  dplyr::mutate(ID = as.character(ID))
-
-# TR treatment columns — candidate names from probe placeholder.
-# Update TR_TX_COLS once 203_schema_<date>.md is written by probe_inputs().
-TR_TX_COLS <- c("rx_summ_treatment_status", "rx_summ_systemic_surg_seq")
-missing_tr <- setdiff(TR_TX_COLS, names(trflags))
-if (length(missing_tr) > 0)
-  stop(
-    "[R203] TR_TX_COLS column(s) not found in TRFLAGS_RDS: ",
-    paste(missing_tr, collapse = ", "),
-    ". Available columns: ", paste(sort(names(trflags)), collapse = ", ")
-  )
-
-char_pt <- char_pt %>%
-  dplyr::left_join(
-    dplyr::select(trflags, ID, dplyr::all_of(TR_TX_COLS)),
-    by = "ID"
-  )
-
-# registry_tx_given: TRUE if any TR treatment column is non-missing and
-# indicates treatment was given (non-NA, non-blank, non-"0", non-"00",
-# non-"No treatment").  Exact logic depends on probe-confirmed value sets;
-# the guard below stops with available values if codes differ on HiPerGator.
-REGISTRY_TX_GIVEN_EXCL <- c(NA_character_, "", "0", "00",
-                             "No treatment", "None", "Unknown", "88", "99")
-
-registry_tx_flag <- trflags %>%
-  dplyr::select(ID, dplyr::all_of(TR_TX_COLS)) %>%
-  tidyr::pivot_longer(
-    cols      = dplyr::all_of(TR_TX_COLS),
-    names_to  = "tr_col",
-    values_to = "tr_val"
-  ) %>%
-  dplyr::mutate(
-    tr_val_chr = as.character(tr_val),
-    tx_indicated = !tr_val_chr %in% REGISTRY_TX_GIVEN_EXCL
-  ) %>%
-  dplyr::group_by(ID) %>%
-  dplyr::summarise(registry_tx_given = any(tx_indicated, na.rm = TRUE),
-                   .groups = "drop")
-
-char_pt <- char_pt %>%
-  dplyr::left_join(registry_tx_flag, by = "ID") %>%
-  dplyr::mutate(
-    registry_tx_given = dplyr::coalesce(registry_tx_given, FALSE),
-    # NOTX-04 named stratum: registry indicates treatment but pipeline captured 0.
-    registry_says_tx_pipeline_missed =
-      registry_tx_given & group == "no_treatment"
-  )
-
-notx04_summary <- char_pt %>%
-  dplyr::group_by(group) %>%
-  dplyr::summarise(
-    n_tr_fields_present           = sum(!is.na(.data[[TR_TX_COLS[1]]]) |
-                                        !is.na(.data[[TR_TX_COLS[2]]]),
-                                        na.rm = TRUE),
-    n_registry_tx_given           = sum(registry_tx_given, na.rm = TRUE),
-    n_registry_says_tx_missed     = sum(registry_says_tx_pipeline_missed, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-message("[R203 NOTX-04] registry treatment summary (NOTX-04 stratum):")
-print(notx04_summary)
-message(glue(
-  "[R203] char_pt complete: {nrow(char_pt)} rows, {ncol(char_pt)} columns; ",
-  "groups: ", paste(sort(unique(char_pt$group)), collapse = " | ")
-))
-
-# ==============================================================================
-# SECTION 9: SAVE PATIENT-LEVEL FRAME (internal only) ----
-# char_pt is patient-level (IDs present) — write to output/internal/ only.
-# ==============================================================================
-
-out_rds <- file.path(
-  CONFIG$output_dir, "internal",
-  glue("203_no_treatment_characterization_{RUN_DATE}.rds")
-)
+# Internal patient-level frame (IDs, dates) — output/internal only.
+out_rds <- file.path(internal_dir, glue("203_no_treatment_characterization_{RUN_DATE}.rds"))
 dir.create(dirname(out_rds), showWarnings = FALSE, recursive = TRUE)
 saveRDS(char_pt, out_rds)
 message(glue("[R203] char_pt saved: {out_rds}"))
 
-# ==============================================================================
-# SECTION 10: NOTX-05 — CANDIDATE "TREATMENT OBSERVABLE" RULE (Plan 203-03) ----
-# RULE NOT APPLIED — proposed team decision item (D-203-01).
-# The flag is documented and counted per group but never used to filter the
-# cohort or remove any patient from the analysis.
-# ==============================================================================
+notx_pt <- char_pt |> filter(group == "no_treatment")
+n_tr_missed <- sum(notx_pt$f_tr_treated)
+message(glue("[R203] KEY FINDING: TR says treated among no_tx: {fmt_sup(n_tr_missed)} of {n_notx}"))
 
-# treatment_observable: patient had >= 1 encounter within +/-90 days of dx AND
-# diagnosis is not truncated by the data window AND dates are not missing.
-# This is the proposed rule; it is NOT applied as a filter here.
-char_pt <- char_pt %>%
-  dplyr::mutate(
-    treatment_observable = (n_enc_peri_dx >= 1L) &
-                           (!window_truncated) &
-                           (!window_date_missing)
+# ==============================================================================
+# SECTION 5: NOTX-05 — CANDIDATE "TREATMENT OBSERVABLE" RULE ----
+# RULE NOT APPLIED — proposed team decision item (D-203-01). Never used to filter
+# the cohort or the Gantt file.
+# ==============================================================================
+# treatment_observable = dx date present AND an encounter within the EHR coverage
+# window (first usable encounter <= dx + 90d) AND >= 180d follow-up after dx.
+# Multi-source care and far-from-care are NOT part of the rule (reported as
+# sensitivity flags in B_reasons_waterfall).
+char_pt <- char_pt |>
+  mutate(
+    dates_missing = is.na(first_hl_dx_date),
+    treatment_observable = !dates_missing & !f_dx_before_coverage & !f_short_followup
   )
 
-# Detailed FALSE-reason breakdown (mutually exclusive — assign first applicable).
-char_pt <- char_pt %>%
-  dplyr::mutate(
-    tx_obs_false_reason = dplyr::case_when(
-      treatment_observable                    ~ NA_character_,
-      window_date_missing                     ~ "dates_missing",
-      window_truncated                        ~ "window_truncated",
-      n_enc_peri_dx == 0L                     ~ "no_peri_dx_encounter",
-      TRUE                                    ~ "other"
-    )
-  )
-
-# Per-group summary of treatment_observable TRUE/FALSE.
-message("[R203 NOTX-05] treatment_observable counts (RULE NOT APPLIED):")
-tx_obs_counts <- char_pt %>%
-  dplyr::count(group, treatment_observable) %>%
-  dplyr::arrange(group, treatment_observable)
-print(tx_obs_counts)
-
-# candidate_rules_tbl: per group, TRUE | FALSE and breakdown of FALSE reasons.
-# Includes an explicit label that this rule is not applied.
-#
-# RULE NOT APPLIED — proposed team decision item (D-203-01)
-candidate_rules_tbl <- dplyr::bind_rows(
-  # Row 1: label row (not applied)
-  tibble::tibble(
-    group              = "** RULE NOT APPLIED — proposed team decision item (D-203-01) **",
-    n_total            = NA_integer_,
-    n_observable_true  = NA_integer_,
-    n_observable_false = NA_integer_,
-    n_false_dates_missing    = NA_integer_,
-    n_false_window_truncated = NA_integer_,
-    n_false_no_peri_dx       = NA_integer_
-  ),
-  char_pt %>%
-    dplyr::group_by(group) %>%
-    dplyr::summarise(
-      n_total            = dplyr::n(),
-      n_observable_true  = sum(treatment_observable,  na.rm = TRUE),
-      n_observable_false = sum(!treatment_observable, na.rm = TRUE),
-      n_false_dates_missing    = sum(tx_obs_false_reason == "dates_missing",        na.rm = TRUE),
-      n_false_window_truncated = sum(tx_obs_false_reason == "window_truncated",     na.rm = TRUE),
-      n_false_no_peri_dx       = sum(tx_obs_false_reason == "no_peri_dx_encounter", na.rm = TRUE),
-      .groups = "drop"
-    )
-)
-
-message("[R203 NOTX-05] candidate_rules_tbl:")
-print(candidate_rules_tbl)
-
 # ==============================================================================
-# SECTION 11: WORKBOOK ASSEMBLY (Plan 203-03) ----
+# SECTION 6: WORKBOOK ASSEMBLY ----
 # KEY leftmost, then A_profile, B_reasons_waterfall, C_by_source,
-# D_candidate_rules, QC. <11 suppression applied at display time.
-# Patient-level data written to output/internal/ ONLY (char_pt already saved
-# in Section 9; this section produces the team-facing xlsx).
+# D_candidate_rules, QC. fmt_sup applied to every displayed count.
 # ==============================================================================
 
-# --- Suppression helpers (local scope) ----------------------------------------
-suppress_small <- function(n) {
-  ifelse(!is.na(n) & n > 0L & n <= 10L, "<11", as.character(n))
-}
-sup_col <- function(x) vapply(x, function(v) suppress_small(v), character(1))
-
-# Apply suppression to a data frame: suppress all integer/numeric columns named
-# in `count_cols`; blank character columns named in `blank_cols` where
-# the corresponding count is suppressed (complementary suppression).
-sup_df <- function(df, count_cols, blank_cols = character(0)) {
-  for (col in count_cols) {
-    if (!col %in% names(df)) next
-    raw <- df[[col]]
-    hit <- !is.na(raw) & raw > 0L & raw <= 10L
-    if (length(blank_cols) > 0) {
-      for (bc in blank_cols) {
-        if (bc %in% names(df)) df[[bc]][hit] <- ""
-      }
-    }
-    df[[col]] <- suppress_small(raw)
-  }
-  df
-}
-
-# --- UF colours / styles -------------------------------------------------------
 UF_BLUE   <- "#0021A5"
 UF_ORANGE <- "#FA4616"
+hdr_style <- openxlsx::createStyle(fgFill = UF_BLUE, fontColour = "white",
+  textDecoration = "bold", fontName = "Arial", fontSize = 11, halign = "left")
+accent_style <- openxlsx::createStyle(fgFill = UF_ORANGE, fontColour = "white",
+  textDecoration = "bold", fontName = "Arial", fontSize = 11)
 
-hdr_style <- openxlsx::createStyle(
-  fgFill         = UF_BLUE,
-  fontColour     = "white",
-  textDecoration = "bold",
-  fontName       = "Arial",
-  fontSize       = 11,
-  halign         = "left"
-)
-accent_style <- openxlsx::createStyle(
-  fgFill         = UF_ORANGE,
-  fontColour     = "white",
-  textDecoration = "bold",
-  fontName       = "Arial",
-  fontSize       = 11
-)
-
-# Helper: add sheet, write data with header styling, optional accent on row 1.
-write_sheet <- function(wb, sheet_name, df, accent_first = FALSE,
-                        col_widths = 20) {
+write_sheet <- function(wb, sheet_name, df, accent_first = FALSE, col_widths = 22) {
   openxlsx::addWorksheet(wb, sheet_name)
   openxlsx::writeData(wb, sheet_name, df, startRow = 1, headerStyle = hdr_style)
-  openxlsx::setColWidths(wb, sheet_name, cols = seq_len(ncol(df)),
-                         widths = col_widths)
-  if (accent_first && nrow(df) >= 1) {
-    openxlsx::addStyle(wb, sheet_name, accent_style,
-                       rows = 2, cols = seq_len(ncol(df)), stack = FALSE)
-  }
+  openxlsx::setColWidths(wb, sheet_name, cols = seq_len(ncol(df)), widths = col_widths)
+  if (accent_first && nrow(df) >= 1)
+    openxlsx::addStyle(wb, sheet_name, accent_style, rows = 2,
+                       cols = seq_len(ncol(df)), stack = FALSE)
 }
 
-# --- Build display frames (suppression applied here) --------------------------
-
-# A_profile: side-by-side profile for each NOTX-01..NOTX-04 characteristic.
-# One long table pivoted so no_treatment and treated are ADJACENT columns.
-build_profile_section <- function(df_long, label_col, characteristic_name) {
-  # df_long has columns: group, <label_col>, n
-  df_long %>%
-    dplyr::rename(category = dplyr::all_of(label_col)) %>%
-    dplyr::mutate(category = as.character(category)) %>%
-    tidyr::pivot_wider(names_from = group, values_from = n, values_fill = 0L) %>%
-    dplyr::mutate(
-      characteristic = characteristic_name,
-      no_treatment = suppress_small(no_treatment),
-      treated      = suppress_small(treated)
-    ) %>%
-    dplyr::select(characteristic, category, no_treatment, treated)
+# A_profile: no_treatment and treated adjacent columns per characteristic.
+profile_section <- function(df, var, name) {
+  df |>
+    mutate(category = as.character(.data[[var]]),
+           category = if_else(is.na(category), "Missing", category)) |>
+    count(group, category, name = "n") |>
+    complete(group = c("no_treatment", "treated"), category, fill = list(n = 0L)) |>
+    pivot_wider(names_from = group, values_from = n, values_fill = 0L) |>
+    mutate(characteristic = name,
+           no_treatment = sup_col(no_treatment), treated = sup_col(treated)) |>
+    select(characteristic, category, no_treatment, treated)
 }
 
-a_window <- build_profile_section(
-  char_pt %>% dplyr::count(group, window_truncated),
-  "window_truncated", "NOTX-01 window_truncated"
-)
-a_dates_missing <- build_profile_section(
-  char_pt %>% dplyr::count(group, window_date_missing),
-  "window_date_missing", "NOTX-01 window_date_missing"
-)
-a_enc_band <- build_profile_section(
-  char_pt %>%
-    dplyr::mutate(enc_band = enc_band(n_enc_peri_dx)) %>%
-    dplyr::count(group, enc_band),
-  "enc_band", "NOTX-02 peri_dx_encounters"
-)
-a_ssc <- build_profile_section(
-  notx03_ssc, "single_source_care", "NOTX-03 single_source_care"
-)
-a_source <- build_profile_section(
-  notx03_source, SOURCE_COL, "NOTX-03 SOURCE"
-)
-a_payer <- build_profile_section(
-  notx03_payer, PAYER_CAT_COL, "NOTX-03 payer"
-)
-a_far <- build_profile_section(
-  notx03_far, FAR_COL, "NOTX-03 far_from_care_100mi"
-)
-a_age <- build_profile_section(
-  notx03_age, "age_group_dx", "NOTX-03 age_group_dx"
-)
-a_subtype <- build_profile_section(
-  notx03_subtype, "hl_subtype", "NOTX-03 hl_subtype"
-)
-# NOTX-04: registry
-a_reg_tx <- build_profile_section(
-  char_pt %>% dplyr::count(group, registry_tx_given),
-  "registry_tx_given", "NOTX-04 registry_tx_given"
-)
-a_reg_missed <- build_profile_section(
-  char_pt %>% dplyr::count(group, registry_says_tx_pipeline_missed),
-  "registry_says_tx_pipeline_missed",
-  "NOTX-04 registry_says_tx_pipeline_missed"
-)
-
-sheet_A <- dplyr::bind_rows(
-  a_window, a_dates_missing, a_enc_band, a_ssc, a_source,
-  a_payer, a_far, a_age, a_subtype, a_reg_tx, a_reg_missed
-)
-
-# B_reasons_waterfall: fraction of no_treatment patients for three reasons.
-n_notx_total <- sum(char_pt$group == "no_treatment")
-
-make_reason_row <- function(label, n_int) {
-  pct_str <- if (!is.na(n_int) && n_int >= 11L && n_notx_total >= 11L) {
-    sprintf("%.1f%%", 100 * n_int / n_notx_total)
-  } else {
-    ""
-  }
-  tibble::tibble(
-    reason    = label,
-    n         = suppress_small(n_int),
-    pct_of_no_treatment = pct_str
+char_flags <- char_pt |>
+  mutate(
+    tr_hl_dx_lbl     = case_when(is.na(tr_hl_dx) ~ "not in TR", tr_hl_dx ~ "TR HL TRUE", TRUE ~ "TR HL FALSE"),
+    tr_says_treated  = if_else(f_tr_treated, "TR says treated", "TR does not say treated"),
+    dx_before_cov    = if_else(f_dx_before_coverage, "dx before EHR coverage", "covered"),
+    nlphl_any_lbl    = if_else(nlphl_any, "NLPHL any", "no NLPHL code"),
+    nlphl_only_lbl   = if_else(nlphl_only, "NLPHL only", "not NLPHL only")
   )
+
+sheet_A <- bind_rows(
+  tibble(characteristic = "group size", category = "all cohort patients",
+         no_treatment = sup_col(n_notx), treated = sup_col(n_treated)),
+  profile_section(char_flags, "age_group_dx",       "age at dx (Gantt HL Diagnosis row)"),
+  profile_section(char_flags, "hl_subtype",         "HL subtype (DIAGNOSIS)"),
+  profile_section(char_flags, "nlphl_any_lbl",      "nlphl_any"),
+  profile_section(char_flags, "nlphl_only_lbl",     "nlphl_only"),
+  profile_section(char_flags, "first_hl_dx_source", "first_hl_dx_source"),
+  profile_section(char_flags, "dx_before_cov",      "EHR coverage (first encounter vs dx + 90d)"),
+  profile_section(char_flags, "followup_band",      "follow-up after dx"),
+  profile_section(char_flags, "single_source_lbl",  "single-source care (R/169)"),
+  profile_section(char_flags, "primary_source",     "primary source (R/169)"),
+  profile_section(char_flags, "far_from_care",      "far from care (100 mi)"),
+  profile_section(char_flags, "payer_category",     "payer category (payer_summary)"),
+  profile_section(char_flags, "tr_hl_dx_lbl",       "tumor registry HL flag"),
+  profile_section(char_flags, "tr_says_treated",    "TR first-course treatment")
+)
+
+# B_reasons_waterfall: no_tx patients; first-match (exclusive) + non-exclusive flags.
+b_excl <- notx_pt |>
+  count(notx_reason, .drop = FALSE) |>
+  mutate(section = "first-match (mutually exclusive)", reason = as.character(notx_reason))
+b_flag_defs <- c(
+  f_tr_treated         = NOTX_REASON_LEVELS[1],
+  f_dx_before_coverage = NOTX_REASON_LEVELS[2],
+  f_short_followup     = NOTX_REASON_LEVELS[3],
+  f_multi_source       = NOTX_REASON_LEVELS[4],
+  f_far_from_care      = NOTX_REASON_LEVELS[5],
+  f_nlphl              = NOTX_REASON_LEVELS[6]
+)
+b_flag <- tibble(
+  section = "flag present (not exclusive; overlaps)",
+  reason  = unname(b_flag_defs),
+  n       = vapply(names(b_flag_defs), function(f) sum(notx_pt[[f]]), integer(1))
+)
+sheet_B <- bind_rows(
+  tibble(section = "population", reason = "no_treatment patients (total)", n = n_notx),
+  b_excl |> select(section, reason, n),
+  b_flag
+) |>
+  mutate(pct_of_no_treatment = pct_sup(n, n_notx), n = sup_col(n))
+
+# C_by_source: R/169 primary_source x group.
+c_one <- function(df, var, name) {
+  df |>
+    mutate(category = as.character(.data[[var]]),
+           category = if_else(is.na(category), "Missing", category),
+           SOURCE = coalesce(primary_source, "Unknown")) |>
+    count(group, SOURCE, category, name = "n") |>
+    mutate(characteristic = name)
 }
+sheet_C <- bind_rows(
+  c_one(char_flags, "dx_before_cov",     "EHR coverage"),
+  c_one(char_flags, "single_source_lbl", "single-source care"),
+  c_one(char_flags, "payer_category",    "payer category"),
+  c_one(char_flags, "tr_says_treated",   "TR first-course treatment"),
+  c_one(filter(char_pt, group == "no_treatment"), "notx_reason", "no_tx reason (first-match)")
+) |>
+  arrange(group, SOURCE, characteristic, category) |>
+  mutate(n = sup_col(n)) |>
+  select(group, SOURCE, characteristic, category, n)
 
-notx_pt <- char_pt %>% dplyr::filter(group == "no_treatment")
-
-sheet_B <- dplyr::bind_rows(
-  make_reason_row(
-    "Total no_treatment patients",
-    n_notx_total
-  ),
-  make_reason_row(
-    "window_truncated (dx before data window start)",
-    sum(notx_pt$window_truncated, na.rm = TRUE)
-  ),
-  make_reason_row(
-    "no peri-dx encounter (n_enc_peri_dx == 0)",
-    sum(notx_pt$n_enc_peri_dx == 0L, na.rm = TRUE)
-  ),
-  make_reason_row(
-    "registry_says_tx_pipeline_missed (TR says tx; pipeline captured 0)",
-    sum(notx_pt$registry_says_tx_pipeline_missed, na.rm = TRUE)
+# D_candidate_rules: rule definition (text) + per-group counts. NOT APPLIED.
+d_def <- tibble(
+  item = c("status", "rule (NOTX-05)", "TRUE means", "FALSE reasons", "not in rule",
+           "application"),
+  value = c(
+    "RULE NOT APPLIED — proposed team decision item (D-203-01)",
+    "treatment_observable = first_hl_dx_date present AND first usable encounter <= dx + 90d AND last encounter - dx >= 180d",
+    "an absent treatment record is informative: the patient was observable in the EHR around dx and afterwards",
+    "dates_missing; dx before EHR coverage (first encounter > dx + 90d or no usable encounter); short follow-up (< 180d)",
+    "multi-source care and far-from-care are reported as flags only; TR-says-treated patients are a pipeline-capture gap, not an observability gap",
+    "Not applied to the cohort or to gantt_episodes_180. Counts below are descriptive."
   )
 )
+d_counts <- char_pt |>
+  group_by(group) |>
+  summarise(
+    n_total                = n(),
+    n_observable_true      = sum(treatment_observable),
+    n_observable_false     = sum(!treatment_observable),
+    n_false_dates_missing  = sum(dates_missing),
+    n_false_dx_before_coverage = sum(!dates_missing & f_dx_before_coverage),
+    n_false_short_followup = sum(!dates_missing & !f_dx_before_coverage & f_short_followup),
+    n_observable_and_tr_treated = sum(treatment_observable & f_tr_treated),
+    .groups = "drop"
+  ) |>
+  mutate(across(starts_with("n_"), sup_col))
 
-# C_by_source: NOTX characteristics by SOURCE, both groups.
-c_source_window <- char_pt %>%
-  dplyr::count(group, .data[[SOURCE_COL]], window_truncated, name = "n") %>%
-  dplyr::mutate(
-    characteristic = "window_truncated",
-    category = as.character(window_truncated),
-    n = suppress_small(n)
-  ) %>%
-  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
-                characteristic, category, n)
-
-c_source_ssc <- char_pt %>%
-  dplyr::count(group, .data[[SOURCE_COL]], single_source_care, name = "n") %>%
-  dplyr::mutate(
-    characteristic = "single_source_care",
-    category = as.character(single_source_care),
-    n = suppress_small(n)
-  ) %>%
-  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
-                characteristic, category, n)
-
-c_source_payer <- char_pt %>%
-  dplyr::count(group, .data[[SOURCE_COL]], .data[[PAYER_CAT_COL]], name = "n") %>%
-  dplyr::rename(category = dplyr::all_of(PAYER_CAT_COL)) %>%
-  dplyr::mutate(
-    characteristic = "payer",
-    category = as.character(category),
-    n = suppress_small(n)
-  ) %>%
-  dplyr::select(group, SOURCE = dplyr::all_of(SOURCE_COL),
-                characteristic, category, n)
-
-sheet_C <- dplyr::bind_rows(c_source_window, c_source_ssc, c_source_payer) %>%
-  dplyr::arrange(group, SOURCE, characteristic, category)
-
-# D_candidate_rules: candidate_rules_tbl with suppression on integer counts.
-sheet_D <- candidate_rules_tbl %>%
-  dplyr::mutate(
-    n_total            = suppress_small(n_total),
-    n_observable_true  = suppress_small(n_observable_true),
-    n_observable_false = suppress_small(n_observable_false),
-    n_false_dates_missing    = suppress_small(n_false_dates_missing),
-    n_false_window_truncated = suppress_small(n_false_window_truncated),
-    n_false_no_peri_dx       = suppress_small(n_false_no_peri_dx)
-  )
-
-# QC sheet.
-n_treated_total <- sum(char_pt$group == "treated")
-n_total_all     <- nrow(char_pt)
-n_dates_missing <- sum(char_pt$window_date_missing, na.rm = TRUE)
-n_r169_missing  <- sum(is.na(char_pt$single_source_care))
-n_tr_missing    <- sum(is.na(char_pt$registry_tx_given))
-
-sheet_QC <- tibble::tibble(
+# QC
+n_missing <- function(x) sum(is.na(x))
+sheet_QC <- tibble(
   check = c(
-    "Population reconciliation: no_treatment + treated == total",
-    "no_treatment",
-    "treated",
-    "total cohort",
-    "reconciliation_ok",
-    "window_date_missing (either date NA)",
-    "patients missing R169 single_source_care join",
-    "patients missing TR-flags join (registry_tx_given NA before coalesce)",
-    "suppression_applied",
-    "D-203-01 note"
+    "no_treatment (expected 3,246 +/- 50)", "treated (expected 4,450 +/- 50)", "total cohort",
+    "population assertion within tolerance",
+    "not in cohort: death-only Gantt patients (expected 166)",
+    "not in cohort: tx-only Gantt patients (expected 558)",
+    "missing: age at dx (no Gantt HL Diagnosis row)",
+    "missing: first usable encounter (none, or sentinel only)",
+    "missing: R/169 single_source_care join",
+    "missing: far-from-care patient rollup",
+    "missing: payer category",
+    "tr_hl_dx NA (patient not in TR)",
+    "patients with HL TR treatment rows (build_tr_treatment_flags)",
+    "patients with no HL code in DIAGNOSIS",
+    "no_tx patients: TR says treated (key finding)",
+    "payer_summary file", "encounter sentinel guard", "suppression"
   ),
   value = c(
-    paste0(n_notx_total, " + ", n_treated_total, " == ", n_total_all),
-    suppress_small(n_notx_total),
-    suppress_small(n_treated_total),
-    suppress_small(n_total_all),
-    as.character(n_notx_total + n_treated_total == n_total_all),
-    suppress_small(n_dates_missing),
-    suppress_small(n_r169_missing),
-    suppress_small(n_tr_missing),
-    "YES — all patient counts 1-10 shown as <11",
-    "RULE NOT APPLIED — treatment_observable is a proposed candidate rule (D-203-01)"
+    fmt_sup(n_notx), fmt_sup(n_treated), fmt_sup(nrow(char_pt)),
+    as.character(pop_ok),
+    fmt_sup(n_death_only), fmt_sup(n_tx_only),
+    fmt_sup(n_missing(char_pt$age_at_dx)),
+    fmt_sup(n_missing(char_pt$first_enc_date)),
+    fmt_sup(n_missing(char_pt$single_source_care)),
+    fmt_sup(n_missing(char_pt$far_any_post)),
+    fmt_sup(n_missing(char_pt$payer_category)),
+    fmt_sup(n_missing(char_pt$tr_hl_dx) ),
+    fmt_sup(n_distinct(tr_tx$ID)),
+    fmt_sup(sum(!char_pt$has_hl_dx_rows)),
+    fmt_sup(n_tr_missed),
+    as.character(payer_path),
+    paste0("ENCOUNTER.ADMIT_DATE < ", format(ENC_DATE_SENTINEL_BEFORE), " excluded from first/last encounter"),
+    "YES — counts 1-10 shown as <11; percentages only when numerator and denominator >= 11"
   )
 )
 
-# KEY sheet.
-sheet_KEY <- tibble::tibble(
-  item  = c(
-    "run_date",
-    "script",
-    "input: cohort_rds",
-    "input: gantt180_csv",
-    "input: r169_rds",
-    "input: trflags_rds",
-    "pinned: cohort_rds",
-    "pinned: gantt180_csv",
-    "pinned: r169_rds",
-    "pinned: trflags_rds",
-    "group: no_treatment",
-    "group: treated",
-    "sheet: KEY",
-    "sheet: A_profile",
-    "sheet: B_reasons_waterfall",
-    "sheet: C_by_source",
-    "sheet: D_candidate_rules",
-    "sheet: QC",
-    "suppression_note",
-    "D-203-01"
+# KEY
+sheet_KEY <- tibble(
+  item = c(
+    "run_date", "script", "schema probe",
+    "input: cohort_rds", "input: gantt180_csv", "input: r169_rds", "input: trflags",
+    "input: farcare_rds", "input: payer_summary",
+    "pinned: cohort_rds", "pinned: gantt180_csv", "pinned: r169_rds", "pinned: trflags",
+    "pinned: farcare_rds",
+    "group: no_treatment", "group: treated",
+    "TR says treated",
+    "waterfall order",
+    "payer",
+    "sheet: A_profile", "sheet: B_reasons_waterfall", "sheet: C_by_source",
+    "sheet: D_candidate_rules", "sheet: QC",
+    "suppression_note", "D-203-01"
   ),
   value = c(
-    RUN_DATE,
-    "R/203_no_treatment_characterization.R",
-    pin_info$cohort_rds$path,
-    pin_info$gantt180_csv$path,
-    pin_info$r169_rds$path,
-    pin_info$trflags_rds$path,
-    as.character(pin_info$cohort_rds$pinned),
-    as.character(pin_info$gantt180_csv$pinned),
-    as.character(pin_info$r169_rds$pinned),
-    as.character(pin_info$trflags_rds$pinned),
-    "0 captured treatment episodes in gantt_episodes_180",
-    ">=1 captured treatment episode in gantt_episodes_180",
-    "this sheet — provenance, inputs, group definitions, notes",
-    "side-by-side NOTX-01..NOTX-04 profile: no_treatment vs treated",
-    "fraction of no_treatment patients meeting each truncation/capture reason",
-    "NOTX characteristics broken down by SOURCE/partner site, both groups",
-    "proposed treatment_observable candidate rule (RULE NOT APPLIED — D-203-01)",
-    "population reconciliation and join-completeness checks",
-    "Patient counts 1-10 are shown as <11. Rates/pct only when N and D >= 11.",
-    "RULE NOT APPLIED — treatment_observable is a proposed team decision item"
+    RUN_DATE, "R/203_no_treatment_characterization.R",
+    ".planning/schemas/203_schema_inputs_20261114.md",
+    pin_cohort$path, pin_gantt$path, pin_r169$path, pin_trflags$path, pin_far$path,
+    as.character(payer_path),
+    as.character(pin_cohort$pinned), as.character(pin_gantt$pinned),
+    as.character(pin_r169$pinned), as.character(pin_trflags$pinned),
+    as.character(pin_far$pinned),
+    "cohort patients with no Gantt treatment_type in Chemotherapy, Immunotherapy, Radiation, SCT, Proton Therapy",
+    "cohort patients with >= 1 Gantt episode of those types",
+    paste0("registry first-course treatment (UFH + ORL, types ", paste(TR_NOTX_TYPES, collapse = "/"),
+           ") documented while the pipeline captured none; function build_tr_treatment_flags() in R/utils/utils_cancer.R"),
+    paste(seq_along(NOTX_REASON_LEVELS), NOTX_REASON_LEVELS, sep = ". ", collapse = " | "),
+    "PAYER_CATEGORY_PRIMARY from load_payer_summary(); classify_payer_tier() is encounter-level and not applied",
+    "side-by-side profile: no_treatment vs treated",
+    "no_treatment reasons: first-match exclusive counts plus non-exclusive flag counts",
+    "primary_source (R/169) x group",
+    "proposed treatment_observable rule — NOT APPLIED (D-203-01)",
+    "population reconciliation, join completeness, non-cohort Gantt patients",
+    "Patient counts 1-10 are shown as <11. Percentages only when numerator and denominator >= 11.",
+    "RULE NOT APPLIED — proposed team decision item"
   )
 )
 
-# --- Assemble workbook --------------------------------------------------------
+# --- Assemble workbook ----------------------------------------------------------
 wb <- openxlsx::createWorkbook()
+write_sheet(wb, "KEY",                 sheet_KEY, accent_first = TRUE)   # leftmost
+write_sheet(wb, "A_profile",           sheet_A)
+write_sheet(wb, "B_reasons_waterfall", sheet_B)
+write_sheet(wb, "C_by_source",         sheet_C)
+write_sheet(wb, "D_candidate_rules",   d_def, accent_first = TRUE, col_widths = c(22, 120))
+openxlsx::writeData(wb, "D_candidate_rules", d_counts,
+                    startRow = nrow(d_def) + 3, headerStyle = hdr_style)
+write_sheet(wb, "QC",                  sheet_QC, col_widths = c(60, 60))
 
-# KEY leftmost — added first.
-write_sheet(wb, "KEY",                sheet_KEY,   accent_first = TRUE)
-write_sheet(wb, "A_profile",          sheet_A,     accent_first = FALSE)
-write_sheet(wb, "B_reasons_waterfall", sheet_B,    accent_first = FALSE)
-write_sheet(wb, "C_by_source",        sheet_C,     accent_first = FALSE)
-write_sheet(wb, "D_candidate_rules",  sheet_D,     accent_first = TRUE)
-write_sheet(wb, "QC",                 sheet_QC,    accent_first = FALSE)
-
-out_fname <- glue("203_no_treatment_characterization_{format(Sys.Date(), '%Y%m%d')}.xlsx")
-out_path  <- file.path(CONFIG$output_dir, out_fname)
+out_path <- file.path(CONFIG$output_dir, glue("203_no_treatment_characterization_{RUN_DATE}.xlsx"))
 dir.create(CONFIG$output_dir, showWarnings = FALSE, recursive = TRUE)
 openxlsx::saveWorkbook(wb, out_path, overwrite = TRUE)
 
 message(glue("[R203] Workbook written: {out_path}"))
 message(glue(
-  "[R203] Sheets: KEY ({nrow(sheet_KEY)} rows), ",
-  "A_profile ({nrow(sheet_A)}), B_reasons_waterfall ({nrow(sheet_B)}), ",
-  "C_by_source ({nrow(sheet_C)}), D_candidate_rules ({nrow(sheet_D)}), ",
-  "QC ({nrow(sheet_QC)})"
+  "[R203] Sheets: KEY ({nrow(sheet_KEY)} rows), A_profile ({nrow(sheet_A)}), ",
+  "B_reasons_waterfall ({nrow(sheet_B)}), C_by_source ({nrow(sheet_C)}), ",
+  "D_candidate_rules ({nrow(d_def)}+{nrow(d_counts)}), QC ({nrow(sheet_QC)})"
 ))
-
-# patient-level char_pt already written to output/internal in Section 9;
-# the xlsx workbook above contains NO patient IDs.
-message("[R203] Plan 203-03 complete. Patient-level RDS in output/internal/ only.")
+message("[R203] Done. Patient-level RDS in output/internal/ only; workbook has no patient IDs.")
