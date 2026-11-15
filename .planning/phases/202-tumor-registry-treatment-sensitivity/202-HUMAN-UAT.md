@@ -1,5 +1,5 @@
 ---
-status: partial
+status: complete
 phase: 202-tumor-registry-treatment-sensitivity
 source: [202-VERIFICATION.md]
 started: 2026-11-14T00:00:00Z
@@ -8,7 +8,7 @@ updated: 2026-11-14T00:00:00Z
 
 ## Current Test
 
-[awaiting human testing]
+[all tests complete]
 
 ## Tests
 
@@ -18,18 +18,18 @@ result: done 2026-11-14 — probe saved at .planning/schemas/202_schema_tr_treat
 
 ### 2. Full R/202 execution on HiPerGator (TRVAL-02 through TRVAL-06)
 expected: Denominator ≈600, footnote 121; xlsx written with sheets KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, E_coverage_window, PPV_reverse, QC.
-result: run done 2026-11-14 (denominator 600, footnote 121; chemo TR n 518, within 90d 241 / 46.5%; radiation TR 138, PPV 36.7%; immunotherapy PPV 6.8%, 13/192). Fixes/extensions in quick 261114-qv3; rerun pending.
+result: done 2026-11-14 on HiPerGator. Denominator 600, footnote 121. Chemo sensitivity 46.5% overall (TR n 518, within 90d 241), 80.3% within EHR coverage window (294 patients). Radiation: 84/115 in-window TR records with no pipeline record. Earlier run also gave radiation PPV 36.7%, immunotherapy PPV 6.8% (13/192). Fixes/extensions in quick 261114-qv3.
 
 ### 3. R/88 SECTION 15be workbook checks (TRVAL-07)
 expected: Set R202_SENSITIVITY_XLSX to the written xlsx path; rerun R/88 SECTION 15be; workbook checks PASS (KEY leftmost, all 8 sheets present, at least one '<11' in A_sensitivity).
-result: [pending]
+result: done 2026-11-14 — TR-VAL-202 12/12 PASS.
 
 ## Summary
 
 total: 3
-passed: 1
+passed: 3
 issues: 0
-pending: 2
+pending: 0
 skipped: 0
 blocked: 0
 
