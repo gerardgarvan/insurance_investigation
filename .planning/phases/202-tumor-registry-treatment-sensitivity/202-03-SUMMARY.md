@@ -64,3 +64,11 @@ None — this plan adds smoke infrastructure only. The underlying R/202_tr_sensi
 - `grep -n "202_tr_sensitivity" R/SCRIPT_INDEX.md`: 1 match at line 189
 - `grep -n "TRVAL-01" R/SCRIPT_INDEX.md`: 1 match
 - `grep -n "R202_SENSITIVITY_XLSX" R/SCRIPT_INDEX.md`: 1 match
+
+## Addendum — first HiPerGator run and follow-up (quick 261114-qv3, 2026-11-14)
+- Run: denominator 600, footnote 121; HL TR rows UFH 432 / ORL 295 / TMH <11.
+- Chemo: TR n 518; within 90d 241 (46.5%); not captured 276 (~155 no pipeline record, ~120 pipeline record >90d away). PPV_reverse 393 pipeline-chemo patients, 364 with TR chemo (92.6%).
+- D_by_year chemo: <=2014 24.6% (61/248); >2014 71.1% (160/225); Unknown 44.4% (20/45). Points to EHR coverage window.
+- Radiation: TR 138; not captured 109; captured-undated 26 (UFH, code-only); PPV 36.7%.
+- Immunotherapy: PPV 6.8% (13/192). Definitional: registry codes brentuximab vedotin as chemotherapy; first course only.
+- Follow-up changes: see `.planning/quick/261114-qv3-*/261114-qv3-SUMMARY.md` (three-tier not-captured split, sheet E_coverage_window, finer year bands, C consistency, labels/KEY, R/88 15be, helper + synthetic test).

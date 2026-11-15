@@ -17,11 +17,11 @@ expected: Run Task 0 probe from 202-01-PLAN.md on HiPerGator; write `.planning/s
 result: done 2026-11-14 — probe saved at .planning/schemas/202_schema_tr_treatment_cols_20261114.md; constants applied in quick 261114-qj1
 
 ### 2. Full R/202 execution on HiPerGator (TRVAL-02 through TRVAL-06)
-expected: Denominator ≈600, footnote 121; xlsx written with sheets KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, PPV_reverse, QC.
-result: [pending]
+expected: Denominator ≈600, footnote 121; xlsx written with sheets KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, E_coverage_window, PPV_reverse, QC.
+result: run done 2026-11-14 (denominator 600, footnote 121; chemo TR n 518, within 90d 241 / 46.5%; radiation TR 138, PPV 36.7%; immunotherapy PPV 6.8%, 13/192). Fixes/extensions in quick 261114-qv3; rerun pending.
 
 ### 3. R/88 SECTION 15be workbook checks (TRVAL-07)
-expected: Set R202_SENSITIVITY_XLSX to the written xlsx path; rerun R/88 SECTION 15be; workbook checks PASS (KEY leftmost, all 7 sheets present, at least one '<11' in A_sensitivity).
+expected: Set R202_SENSITIVITY_XLSX to the written xlsx path; rerun R/88 SECTION 15be; workbook checks PASS (KEY leftmost, all 8 sheets present, at least one '<11' in A_sensitivity).
 result: [pending]
 
 ## Summary

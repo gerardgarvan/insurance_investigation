@@ -12,15 +12,17 @@
 #   a footnote row, not in the sensitivity denominator.
 #
 # Inputs (all pinned):
-#   - R202_GANTT_180      gantt_episodes_180 CSV (HiPerGator only)
-#   - R202_TR_FLAGS       tr_lymphoma_flags_all_patients RDS from R/193
+#   - R202_GANTT_180      gantt_episodes_180 CSV (default output/gantt_episodes_180.csv)
+#   - R202_TR_FLAGS       tr_lymphoma_flags_all_patients .csv or .rds from R/193
+#                         (default: newest output/tr_lymphoma_flags_all_patients_*.csv)
 #   - R202_COHORT_RDS     confirmed_hl_cohort.rds (used in Section 10 D_by_year)
 #   - R202_TR_DATA        TUMOR_REGISTRY_ALL treatment columns (queried live)
 #   - R202_OUTPUT_DIR     output directory (default: output/)
 #
 # Outputs:
 #   - output/202_tr_sensitivity_YYYYMMDD.xlsx
-#       Sheets: KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, QC
+#       Sheets: KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year,
+#       E_coverage_window, PPV_reverse, QC
 #
 # Phase 202 TRVAL-01 through TRVAL-07
 #
@@ -40,6 +42,7 @@ suppressPackageStartupMessages({
 
 source("R/00_config.R")
 source("R/utils/utils_duckdb.R")
+source("R/utils/utils_tr_sensitivity.R")
 message("=== R/202: Tumor-registry treatment sensitivity ===\n")
 
 # --- IS_LOCAL GUARD -----------------------------------------------------------
@@ -62,18 +65,28 @@ sup_col <- function(x) vapply(x, fmt_sup, character(1))
 # --- PINNED INPUTS -----------------------------------------------------------
 gantt_180_path <- {
   ev <- Sys.getenv("R202_GANTT_180", unset = "")
-  if (ev != "") ev else CONFIG$gantt_180_snapshot_path
+  if (ev != "") ev else file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
 }
 if (is.null(gantt_180_path) || gantt_180_path == "" || !file.exists(gantt_180_path)) {
   stop(glue("R202: gantt_180 not found at '{gantt_180_path}'. ",
-            "Set R202_GANTT_180 or confirm CONFIG$gantt_180_snapshot_path."))
+            "Set R202_GANTT_180 to the gantt_episodes_180 CSV."))
 }
 
-tr_flags_path <- Sys.getenv("R202_TR_FLAGS",
-  unset = "/blue/erin.mobley-hl.bcu/insurance_investigation/output/internal/tr_lymphoma_flags_all_patients_<DATED>.rds")
-if (!file.exists(tr_flags_path))
-  stop("[R202] R202_TR_FLAGS file not found: ", tr_flags_path,
-       "\nSet R202_TR_FLAGS to the Phase 201/193 TR flags RDS path.")
+# TR flags: env var wins; otherwise newest dated CSV from R/193 in output/.
+# (Newest-file default requested by the user for this input, 2026-11-14.)
+tr_flags_path <- {
+  ev <- Sys.getenv("R202_TR_FLAGS", unset = "")
+  if (ev != "") ev else {
+    cands <- list.files(CONFIG$output_dir,
+                        pattern = "^tr_lymphoma_flags_all_patients_.*[.]csv$",
+                        full.names = TRUE)
+    if (length(cands) == 0L) "" else sort(cands, decreasing = TRUE)[1L]  # YYYYMMDD in name
+  }
+}
+if (tr_flags_path == "" || !file.exists(tr_flags_path))
+  stop("[R202] TR flags file not found: '", tr_flags_path,
+       "'
+Set R202_TR_FLAGS to the R/193 tr_lymphoma_flags_all_patients .csv or .rds path.")
 
 cohort_rds_path <- Sys.getenv("R202_COHORT_RDS",
   unset = file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds"))
@@ -198,7 +211,16 @@ message(glue("  gantt_episodes_180: {nrow(gantt)} rows, {n_gantt_pts} distinct p
 
 # --- SECTION 2: LOAD TR FLAGS ------------------------------------------------
 message("=== Section 2: Load TR flags (R/193 output) ===")
-tr_flags <- readRDS(tr_flags_path)
+tr_flags <- if (grepl("\\.rds$", tr_flags_path, ignore.case = TRUE)) {
+  readRDS(tr_flags_path)
+} else {
+  vroom(tr_flags_path, col_types = cols(.default = col_character()), show_col_types = FALSE)
+}
+# CSV carries blank / "TRUE" / "FALSE"; make the flags logical (no-op for RDS)
+tr_flags <- tr_flags |>
+  mutate(ID = as.character(ID),
+         tr_hl_dx  = tr_flag_to_logical(tr_hl_dx),
+         tr_nhl_dx = tr_flag_to_logical(tr_nhl_dx))
 n_tr_hl_all <- sum(tr_flags$tr_hl_dx == TRUE, na.rm = TRUE)
 message(glue("  TR flags: {nrow(tr_flags)} patients; {n_tr_hl_all} with tr_hl_dx TRUE"))
 
@@ -225,16 +247,22 @@ if (!"SOURCE" %in% tr_all_cols || length(hist_present) == 0L) {
        ") missing from TUMOR_REGISTRY_ALL")
 }
 
-needed_cols <- unique(c("ID", "SOURCE", hist_present, map_cols))
+# TR diagnosis-date columns for the D_by_year fallback (named in the task spec; not
+# in the 202 probe, so they are used only if present in the table).
+TR_DX_DATE_COLS <- c(UFH = "DATE_OF_DIAGNOSIS", ORL = "DXDATE", TMH = "DXDATE")
+dx_cols_present <- intersect(unique(TR_DX_DATE_COLS), tr_all_cols)
+message("  TR dx-date columns present: ",
+        if (length(dx_cols_present)) paste(dx_cols_present, collapse = ", ") else "NONE (no TR dx-year fallback)")
+
+needed_cols <- unique(c("ID", "SOURCE", hist_present, map_cols, dx_cols_present))
 tr_data <- tr_tbl_raw |>
   select(all_of(needed_cols)) |>
   collect()
 close_pcornet_con()
 
 tr_hl <- tr_data |>
-  mutate(is_hl_row = Reduce(`|`, lapply(hist_present, function(cn)
-    substr(as.character(.data[[cn]]), 1, 4) %in% ICD_CODES$hl_histology))) |>
-  filter(is_hl_row)
+  filter(if_any(all_of(hist_present),
+                ~ substr(as.character(.x), 1, 4) %in% !!ICD_CODES$hl_histology))
 n_tr_rows    <- nrow(tr_data)
 n_tr_hl_rows <- nrow(tr_hl)
 n_tmh_rows   <- sum(tr_hl$SOURCE == "TMH")
@@ -281,6 +309,20 @@ tr_evidence <- bind_rows(lapply(seq_len(nrow(TR_MAP)), function(i) tr_row_eviden
 tr_pt_src <- collapse_evidence(tr_evidence, c("ID", "SOURCE", "trtype"))              # per source (C, B)
 tr_pt_all <- collapse_evidence(filter(tr_evidence, SOURCE %in% SENS_SOURCES),
                                c("ID", "trtype"))                                      # UFH+ORL (A, D, PPV)
+# Earliest TR diagnosis year per patient (HL rows; UFH DATE_OF_DIAGNOSIS, ORL/TMH DXDATE)
+tr_dx_year <- bind_rows(lapply(names(TR_DX_DATE_COLS), function(src) {
+  col <- TR_DX_DATE_COLS[[src]]
+  if (!col %in% names(tr_hl)) return(tibble(ID = character(), dx_year_tr = integer()))
+  tr_hl |>
+    filter(SOURCE == src) |>
+    rename(dx_raw = all_of(col)) |>
+    transmute(ID = as.character(ID),
+              dx_year_tr = year(suppressWarnings(as.Date(substr(as.character(dx_raw), 1, 10)))))
+})) |>
+  filter(!is.na(dx_year_tr)) |>
+  group_by(ID) |>
+  summarise(dx_year_tr = min(dx_year_tr), .groups = "drop")
+
 message(glue("  tr_pt_src: {nrow(tr_pt_src)} patient x source x type rows; ",
              "tr_pt_all: {nrow(tr_pt_all)} patient x type rows"))
 
@@ -330,15 +372,22 @@ if (!hormone_comparable) {
 }
 
 # --- SECTION 6: CAPTURE CLASSIFICATION --------------------------------------
-# Per patient x treatment type (x SOURCE for the source-level table):
+# Per patient x treatment type (x SOURCE for the source-level table). Tier logic
+# lives in R/utils/utils_tr_sensitivity.R (tr_capture_tier; unit-tested):
 #   unknown_code  TR code is unknown (88/99/8/9) and no HL row says given
 #   no_registry   TR does not record this treatment as given
-#   not_captured  TR given; no Gantt episode of that type (or first dates >90 d apart)
+#   no_pipeline   TR given; no Gantt episode of that type
+#   pipe_before   TR given; first Gantt episode > 90 d BEFORE TR date
+#   pipe_after    TR given; first Gantt episode > 90 d AFTER TR date
 #   not_datable   TR given by code only (no date); Gantt episode exists
 #   exact / within_30d / within_90d   |TR first date - Gantt first date|
 message("=== Section 6: Capture classification ===")
-GIVEN_TIERS <- c("exact", "within_30d", "within_90d", "not_datable", "not_captured")
-HIT_TIERS   <- c("exact", "within_30d", "within_90d")
+GIVEN_TIERS <- TR_GIVEN_TIERS
+HIT_TIERS   <- TR_HIT_TIERS
+
+L_NOPIPE <- "No pipeline record of this type"
+L_BEFORE <- "Pipeline record > 90d BEFORE TR date"
+L_AFTER  <- "Pipeline record > 90d AFTER TR date"
 
 classify_capture <- function(tr_pt, gantt_first_df, ids) {
   tr_pt |>
@@ -346,18 +395,26 @@ classify_capture <- function(tr_pt, gantt_first_df, ids) {
     inner_join(filter(TYPE_DEF, !is.na(gantt_type)), by = "trtype") |>
     left_join(gantt_first_df, by = c("ID" = "patient_id", "gantt_type" = "treatment_type")) |>
     mutate(
-      d = abs(as.integer(tr_first_date - gantt_first_date)),
-      capture_tier = case_when(
-        tr_status == "unknown"        ~ "unknown_code",
-        tr_status != "given"          ~ "no_registry",
-        is.na(gantt_first_date)       ~ "not_captured",
-        is.na(tr_first_date)          ~ "not_datable",
-        d == 0L                       ~ "exact",
-        d <= 30L                      ~ "within_30d",
-        d <= 90L                      ~ "within_90d",
-        TRUE                          ~ "not_captured"
-      ),
+      signed_diff  = tr_signed_diff(tr_first_date, gantt_first_date),
+      capture_tier = tr_capture_tier(tr_status, tr_first_date, gantt_first_date),
       treatment_label = label
+    )
+}
+
+# Group + summarise tiers (raw counts, median/IQR text), then add display columns.
+summ_by <- function(df, ...) {
+  df |>
+    group_by(...) |>
+    group_modify(~ tr_summarise_tiers(.x)) |>
+    ungroup()
+}
+tier_display <- function(raw) {
+  raw |>
+    mutate(
+      pct_exact = pct_sup(n_exact, n_denom),
+      pct_30d   = pct_sup(n_30d,   n_denom),
+      pct_90d   = pct_sup(n_90d,   n_denom),
+      n_captured_incl_undated = n_90d + n_undated
     )
 }
 
@@ -372,73 +429,63 @@ message("=== Section 7: A_sensitivity ===")
 
 # Denominator per type = patients with TR evidence of treatment (given).
 # Unknown-code patients are reported separately, not in the denominator.
+# Exact / <=30d / <=90d are CUMULATIVE tiers; the not-captured tiers are exclusive.
 sensitivity_raw <- classified |>
-  filter(capture_tier %in% GIVEN_TIERS) |>
-  group_by(treatment_label) |>
-  summarise(
-    n_denom        = n(),
-    n_exact        = sum(capture_tier == "exact"),
-    n_30d          = sum(capture_tier %in% c("exact", "within_30d")),
-    n_90d          = sum(capture_tier %in% HIT_TIERS),
-    n_undated      = sum(capture_tier == "not_datable"),
-    n_not_captured = sum(capture_tier == "not_captured"),
-    .groups = "drop"
-  ) |>
+  summ_by(treatment_label) |>
   left_join(
     classified |> filter(capture_tier == "unknown_code") |> count(treatment_label, name = "n_unknown"),
     by = "treatment_label"
   ) |>
-  mutate(
-    n_unknown = coalesce(n_unknown, 0L),
-    pct_exact = pct_sup(n_exact, n_denom),
-    pct_30d   = pct_sup(n_30d,   n_denom),
-    pct_90d   = pct_sup(n_90d,   n_denom),
-    n_denom_disp        = sup_col(n_denom),
-    n_exact_disp        = sup_col(n_exact),
-    n_30d_disp          = sup_col(n_30d),
-    n_90d_disp          = sup_col(n_90d),
-    n_undated_disp      = sup_col(n_undated),
-    n_not_captured_disp = sup_col(n_not_captured),
-    n_unknown_disp      = sup_col(n_unknown)
-  )
+  mutate(n_unknown = coalesce(n_unknown, 0L)) |>
+  tier_display()
 
 sheet_A <- sensitivity_raw |>
-  select(
+  transmute(
     `Treatment Type`     = treatment_label,
-    `TR n (denominator)` = n_denom_disp,
-    `Exact match n`      = n_exact_disp,
+    `TR n (denominator)` = sup_col(n_denom),
+    `Exact match n`      = sup_col(n_exact),
     `Exact match %`      = pct_exact,
-    `Within 30d n`       = n_30d_disp,
-    `Within 30d %`       = pct_30d,
-    `Within 90d n`       = n_90d_disp,
-    `Within 90d %`       = pct_90d,
-    `Captured, TR undated n` = n_undated_disp,
-    `Not captured n`     = n_not_captured_disp,
-    `TR unknown code n (not in denominator)` = n_unknown_disp
+    `≤30d (incl. exact) n` = sup_col(n_30d),
+    `≤30d (incl. exact) %` = pct_30d,
+    `≤90d (incl. ≤30d) n`  = sup_col(n_90d),
+    `≤90d (incl. ≤30d) %`  = pct_90d,
+    `Captured, TR undated n` = sup_col(n_undated),
+    `No pipeline record of this type n`          = sup_col(n_no_pipe),
+    `Pipeline record > 90d BEFORE TR date n`     = sup_col(n_before),
+    `Pipeline record > 90d BEFORE TR date, median (IQR) days` = med_before,
+    `Pipeline record > 90d AFTER TR date n`      = sup_col(n_after),
+    `Pipeline record > 90d AFTER TR date, median (IQR) days`  = med_after,
+    `TR unknown code n (not in denominator)` = sup_col(n_unknown)
   )
 message(glue("  A_sensitivity: {nrow(sheet_A)} rows"))
 
 # --- SECTION 8: B_DATE_DIFF TABLE -------------------------------------------
 # Only type/source pairs that have a TR date column (B_PAIRS); only TR-dated rows.
+# Tiers here are MUTUALLY EXCLUSIVE (each patient in exactly one row).
 message("=== Section 8: B_date_diff ===")
 
-tiers <- c("exact", "within_30d", "within_90d", "not_captured")
-tier_labels <- c("Exact match", "Within 30d", "Within 90d", "Not captured")
+tiers <- c("exact", "within_30d", "within_90d", "pipe_before", "pipe_after", "no_pipeline")
+tier_labels <- c("Exact match", "Within 30d", "Within 90d", L_BEFORE, L_AFTER, L_NOPIPE)
 
-sheet_B_main <- classified_src |>
+b_dated <- classified_src |>
   semi_join(B_PAIRS, by = c("SOURCE" = "source", "trtype")) |>
-  filter(capture_tier %in% GIVEN_TIERS, !is.na(tr_first_date)) |>
+  filter(capture_tier %in% GIVEN_TIERS, !is.na(tr_first_date))
+
+sheet_B_main <- b_dated |>
   group_by(SOURCE, treatment_label, capture_tier) |>
-  summarise(n = n(), .groups = "drop") |>
-  mutate(
-    tier_label = factor(capture_tier, levels = tiers, labels = tier_labels),
-    n_disp     = sup_col(n)
+  summarise(
+    n = n(),
+    med = if (first(capture_tier) %in% c("pipe_before", "pipe_after"))
+            tr_median_iqr(signed_diff) else NA_character_,
+    .groups = "drop"
   ) |>
-  select(
+  mutate(tier_label = factor(capture_tier, levels = tiers, labels = tier_labels)) |>
+  transmute(
     `SOURCE`         = SOURCE,
     `Treatment Type` = treatment_label,
     `Capture Tier`   = tier_label,
-    `Count`          = n_disp
+    `Count`          = sup_col(n),
+    `Median (IQR) days, |TR date - first pipeline date|` = med
   ) |>
   arrange(`SOURCE`, `Treatment Type`, `Capture Tier`)
 
@@ -461,6 +508,9 @@ message(glue("  B_date_diff: {nrow(sheet_B)} rows (including footnote rows)"))
 
 # --- SECTION 9: C_BY_SOURCE TABLE -------------------------------------------
 # All sources incl. TMH (counts only). Sensitivity for UFH/ORL only.
+# "Pipeline captured n" = dated hits + code-only (TR undated) matches, the same
+# way A_sensitivity reports "Captured, TR undated n". Sensitivity % = dated hits
+# (<=90d) / TR given, as in A_sensitivity.
 message("=== Section 9: C_by_source ===")
 
 c_counts <- tr_pt_src |>
@@ -472,31 +522,36 @@ c_counts <- tr_pt_src |>
     .groups = "drop"
   )
 c_sens <- classified_src |>
-  filter(capture_tier %in% GIVEN_TIERS) |>
-  group_by(SOURCE, trtype) |>
-  summarise(n_sens_denom = n(), n_captured = sum(capture_tier %in% HIT_TIERS), .groups = "drop")
+  summ_by(SOURCE, trtype) |>
+  tier_display()
 
 sheet_C_raw <- c_counts |>
   left_join(c_sens, by = c("SOURCE", "trtype")) |>
   left_join(TYPE_DEF |> select(trtype, label), by = "trtype") |>
   mutate(
-    pct_captured = pct_sup(n_captured, n_sens_denom),
     note = case_when(
       SOURCE == "TMH"        ~ "TMH: counts only; too few for sensitivity",
-      is.na(n_sens_denom)    ~ "no Gantt counterpart / not compared",
+      is.na(n_denom)         ~ "no Gantt counterpart / not compared",
       TRUE                   ~ ""
     )
   ) |>
   arrange(SOURCE, label)
 
+c_blank <- function(x, src) ifelse(src == "TMH" | is.na(x), NA_character_, sup_col(x))
 sheet_C <- sheet_C_raw |>
   transmute(
     `SOURCE (partner site)` = SOURCE,
     `Treatment Type`        = label,
     `TR given n`            = sup_col(n_given),
     `TR unknown code n`     = sup_col(n_unknown),
-    `Pipeline captured n`   = ifelse(SOURCE == "TMH" | is.na(n_captured), NA_character_, sup_col(n_captured)),
-    `Sensitivity %`         = ifelse(SOURCE == "TMH", NA_real_, pct_captured),
+    `Pipeline captured n (incl. TR undated)` = c_blank(n_captured_incl_undated, SOURCE),
+    `of which TR undated (code-only) n`      = c_blank(n_undated, SOURCE),
+    `Sensitivity % (dated, ≤90d)`            = ifelse(SOURCE == "TMH", NA_real_, pct_90d),
+    `No pipeline record of this type n`      = c_blank(n_no_pipe, SOURCE),
+    `Pipeline record > 90d BEFORE TR date n` = c_blank(n_before, SOURCE),
+    `Pipeline record > 90d BEFORE TR date, median (IQR) days` = ifelse(SOURCE == "TMH", NA_character_, med_before),
+    `Pipeline record > 90d AFTER TR date n`  = c_blank(n_after, SOURCE),
+    `Pipeline record > 90d AFTER TR date, median (IQR) days`  = ifelse(SOURCE == "TMH", NA_character_, med_after),
     Note                    = note
   )
 sheet_C <- bind_rows(sheet_C, tibble(
@@ -507,50 +562,89 @@ sheet_C <- bind_rows(sheet_C, tibble(
 message(glue("  C_by_source: {nrow(sheet_C)} rows"))
 
 # --- SECTION 10: D_BY_YEAR TABLE --------------------------------------------
-# first_hl_dx_date read from confirmed_hl_cohort.rds via cohort_rds_path
-# (env var R202_COHORT_RDS, pinned in the scaffold section above).
+# Dx year: first_hl_dx_date from confirmed_hl_cohort.rds (R202_COHORT_RDS); when
+# missing, fall back to the year of the TR diagnosis date (tr_dx_year, Section 3b).
 message("=== Section 10: D_by_year ===")
 
 cohort_dx <- readRDS(cohort_rds_path) |>
   select(ID, first_hl_dx_date) |>
-  mutate(dx_year = year(first_hl_dx_date))
-message(glue("  cohort_dx: {nrow(cohort_dx)} patients with dx year"))
+  mutate(dx_year_cohort = year(first_hl_dx_date)) |>
+  select(ID, dx_year_cohort)
+message(glue("  cohort_dx: {nrow(cohort_dx)} patients; ",
+             "{sum(!is.na(cohort_dx$dx_year_cohort))} with dx year"))
 
 classified_yr <- classified |>
-  left_join(cohort_dx, by = "ID")
-
-# Year grouping: define early / late split at median dx_year
-yr_median <- median(classified_yr$dx_year, na.rm = TRUE)
-message(glue("  Median diagnosis year: {yr_median}"))
-
-classified_yr <- classified_yr |>
-  mutate(dx_year_group = ifelse(
-    is.na(dx_year), "Unknown",
-    ifelse(dx_year <= yr_median, glue("Early (≤{yr_median})"), glue("Late (>{yr_median})"))
-  ))
+  left_join(cohort_dx, by = "ID") |>
+  left_join(tr_dx_year, by = "ID") |>
+  mutate(
+    dx_year = coalesce(dx_year_cohort, dx_year_tr),
+    dx_year_group = tr_year_band(dx_year)
+  )
+message(glue("  dx year source (patient x type rows): cohort {sum(!is.na(classified_yr$dx_year_cohort))}; ",
+             "TR fallback {sum(is.na(classified_yr$dx_year_cohort) & !is.na(classified_yr$dx_year_tr))}; ",
+             "still unknown {sum(is.na(classified_yr$dx_year))}"))
 
 sheet_D <- classified_yr |>
-  filter(capture_tier %in% GIVEN_TIERS) |>
-  group_by(dx_year_group, treatment_label) |>
-  summarise(
-    n_denom    = n(),
-    n_captured = sum(capture_tier %in% HIT_TIERS),
-    .groups    = "drop"
-  ) |>
-  mutate(
-    pct_captured    = pct_sup(n_captured, n_denom),
-    n_denom_disp    = sup_col(n_denom),
-    n_captured_disp = sup_col(n_captured)
-  ) |>
-  select(
-    `Dx Year Group`       = dx_year_group,
+  summ_by(dx_year_group, treatment_label) |>
+  filter(n_denom > 0L) |>
+  tier_display() |>
+  transmute(
+    `Dx Year Group`       = as.character(dx_year_group),
     `Treatment Type`      = treatment_label,
-    `TR n`                = n_denom_disp,
-    `Pipeline captured n` = n_captured_disp,
-    `Sensitivity %`       = pct_captured
+    `TR n`                = sup_col(n_denom),
+    `Pipeline captured n (≤90d)` = sup_col(n_90d),
+    `Sensitivity %`       = pct_90d,
+    `Captured, TR undated n` = sup_col(n_undated),
+    `No pipeline record of this type n`      = sup_col(n_no_pipe),
+    `Pipeline record > 90d BEFORE TR date n` = sup_col(n_before),
+    `Pipeline record > 90d BEFORE TR date, median (IQR) days` = med_before,
+    `Pipeline record > 90d AFTER TR date n`  = sup_col(n_after),
+    `Pipeline record > 90d AFTER TR date, median (IQR) days`  = med_after
   ) |>
-  arrange(`Dx Year Group`, `Treatment Type`)
+  arrange(factor(`Dx Year Group`, levels = c(TR_YEAR_BANDS, "Unknown")), `Treatment Type`)
 message(glue("  D_by_year: {nrow(sheet_D)} rows"))
+
+# --- SECTION 10b: E_COVERAGE_WINDOW -----------------------------------------
+# Restrict to TR treatment dates on/after the patient's first ENCOUNTER.ADMIT_DATE
+# in the CDM (EHR coverage window). One row per patient: min(ADMIT_DATE).
+# Aggregated in DuckDB; no patient-ID IN() list. Own open/close block.
+message("=== Section 10b: E_coverage_window ===")
+open_pcornet_con()
+first_enc <- get_pcornet_table("ENCOUNTER") |>
+  group_by(ID) |>
+  summarise(first_enc_date = min(ADMIT_DATE, na.rm = TRUE)) |>
+  collect()
+close_pcornet_con()
+first_enc <- first_enc |>
+  mutate(ID = as.character(ID), first_enc_date = as.Date(first_enc_date))
+message(glue("  first encounter: {nrow(first_enc)} patients; ",
+             "{sum(!is.na(first_enc$first_enc_date))} with ADMIT_DATE"))
+
+e_raw <- bind_rows(lapply(unique(classified$treatment_label), function(lbl) {
+  cf <- tr_coverage_filter(filter(classified, treatment_label == lbl), first_enc)
+  summ_by(cf$in_window, treatment_label) |>
+    tier_display() |>
+    mutate(treatment_label = lbl,
+           n_pre_enc = cf$n_excluded_pre_encounter, n_no_enc = cf$n_no_encounter)
+}))
+
+sheet_E <- e_raw |>
+  transmute(
+    `Treatment Type`      = treatment_label,
+    `TR n in window`      = sup_col(n_denom),
+    `Captured within 90d n` = sup_col(n_90d),
+    `Sensitivity % (within 90d)` = pct_90d,
+    `Captured, TR undated n` = sup_col(n_undated),
+    `No pipeline record of this type n`      = sup_col(n_no_pipe),
+    `Pipeline record > 90d BEFORE TR date n` = sup_col(n_before),
+    `Pipeline record > 90d BEFORE TR date, median (IQR) days` = med_before,
+    `Pipeline record > 90d AFTER TR date n`  = sup_col(n_after),
+    `Pipeline record > 90d AFTER TR date, median (IQR) days`  = med_after,
+    `TR-dated patients excluded: TR date before first encounter n` = sup_col(n_pre_enc),
+    `TR-dated patients excluded: no ENCOUNTER record n`            = sup_col(n_no_enc)
+  ) |>
+  arrange(`Treatment Type`)
+message(glue("  E_coverage_window: {nrow(sheet_E)} rows"))
 
 # --- SECTION 11: PPV_REVERSE SHEET ------------------------------------------
 # For each pipeline treatment type: what fraction of pipeline-captured patients
@@ -628,7 +722,8 @@ sheet_QC <- tibble(
     "TR_MAP columns verified present",
     "Histology columns used",
     "Hormone compared to Gantt (label 'Hormone' present)",
-    "Suppression check: any raw count 1-10 in sheet_A",
+    "Raw counts 1-10 present before suppression (all displayed as <11)",
+    "First-encounter dates (ENCOUNTER, patients with ADMIT_DATE)",
     paste0("ORL chemo (HL rows): ", orl_chemo_grid$dt_chemo, " x ", orl_chemo_grid$rn)
   ),
   Value = c(
@@ -647,10 +742,10 @@ sheet_QC <- tibble(
     paste(hist_present, collapse = ", "),
     as.character(hormone_comparable),
     as.character(any(
-      sensitivity_raw$n_denom   %in% 1:10 |
-      sensitivity_raw$n_exact   %in% 1:10 |
-      sensitivity_raw$n_90d     %in% 1:10
+      unlist(sensitivity_raw[c("n_denom", "n_exact", "n_30d", "n_90d", "n_undated",
+                               "n_no_pipe", "n_before", "n_after", "n_unknown")]) %in% 1:10
     )),
+    as.character(sum(!is.na(first_enc$first_enc_date))),
     vapply(orl_chemo_grid$n, fmt_sup, character(1))
   )
 )
@@ -676,8 +771,9 @@ sheet_KEY <- tibble(
     "Hormone / Systemic",
     "Capture tiers",
     "Sheet A_sensitivity", "Sheet B_date_diff",
-    "Sheet C_by_source", "Sheet D_by_year",
+    "Sheet C_by_source", "Sheet D_by_year", "Sheet E_coverage_window",
     "Sheet PPV_reverse",
+    "Not-captured tiers", "Immunotherapy note", "Radiation note",
     "Suppression rule"
   ),
   Value = c(
@@ -702,12 +798,23 @@ sheet_KEY <- tibble(
     glue("n = {fmt_sup(n_tmh_rows)} TR rows; counts only in C_by_source, no sensitivity"),
     "Code-only (no TR date in any source). Shown in A_sensitivity; no date-difference row in B_date_diff.",
     "Hormone compared to Gantt only if a 'Hormone' treatment_type exists (QC row). Systemic: descriptive counts only (C_by_source).",
-    "exact / within 30 d / within 90 d of first Gantt episode; TR given by code only = 'not datable' (Gantt episode exists); first dates >90 d apart count as not captured.",
-    "% of TR-given patients captured by pipeline (exact/30/90 d), by treatment type",
-    "Date-difference tiers for type/source pairs with a TR date: chemo UFH/ORL, radiation ORL, immuno UFH, hormone UFH/ORL; footnote rows",
-    "Counts by SOURCE for UFH/ORL/TMH; sensitivity for UFH/ORL only",
-    "Sensitivity stratified by diagnosis year group",
+    paste0("exact / within 30 d / within 90 d of first Gantt episode; TR given by code only = 'not datable' (Gantt episode exists). ",
+           "TR given but not captured is split into three tiers (see 'Not-captured tiers')."),
+    "% of TR-given patients captured by pipeline, by treatment type. Tiers are CUMULATIVE: '≤30d (incl. exact)' includes exact matches; '≤90d (incl. ≤30d)' includes both. Not-captured tiers are exclusive.",
+    "Date-difference tiers for type/source pairs with a TR date: chemo UFH/ORL, radiation ORL, immuno UFH, hormone UFH/ORL; footnote rows. Tiers are MUTUALLY EXCLUSIVE (each patient in exactly one tier). Median (IQR) days shown for the two date-mismatch tiers (NA if n < 11).",
+    "Counts by SOURCE for UFH/ORL/TMH; sensitivity for UFH/ORL only. 'Pipeline captured n' includes code-only (TR undated) matches, as in A_sensitivity; Sensitivity % uses dated hits (≤90d) only.",
+    "Sensitivity stratified by diagnosis-year band (<=2009, 2010-2012, 2013-2015, 2016-2018, 2019+). Year from confirmed_hl_cohort.rds first_hl_dx_date; if missing, year of the TR diagnosis date (UFH DATE_OF_DIAGNOSIS, ORL/TMH DXDATE); residual Unknown only if both missing.",
+    paste0("Sensitivity restricted to TR treatment dates on/after the patient's first ENCOUNTER.ADMIT_DATE in the CDM (EHR coverage window). ",
+           "Registry treatment dated before the first encounter cannot be in the pipeline by construction, so this removes pre-coverage dates. ",
+           "TR-undated (code-only) rows cannot be placed against the window and are retained. ",
+           "Excluded patients (TR date before first encounter; no ENCOUNTER record) are counted per treatment type."),
     "For pipeline captures, fraction with matching registry record (PPV direction; UFH + ORL)",
+    paste0("No pipeline record of this type = TR given, no Gantt episode of that type. ",
+           "Pipeline record > 90d BEFORE TR date = first Gantt episode more than 90 d earlier than the TR date. ",
+           "Pipeline record > 90d AFTER TR date = first Gantt episode more than 90 d later. Based on the first Gantt episode of the type only."),
+    paste0("Registry first-course coding records brentuximab vedotin as chemotherapy, and later-line nivolumab/pembrolizumab are not first course. ",
+           "A low immunotherapy agreement (PPV) is a definitional difference, not a pipeline error."),
+    "UFH has no TR radiation date: UFH radiation is code-only (REASON_NO_RADIATION), so it appears as 'Captured, TR undated' and never in a date tier.",
     "Counts 1-10 displayed as '<11'; percentages only when numerator and denominator >= 11"
   )
 )
@@ -741,6 +848,7 @@ write_sheet(wb, "A_sensitivity", sheet_A)
 write_sheet(wb, "B_date_diff",   sheet_B)
 write_sheet(wb, "C_by_source",   sheet_C)
 write_sheet(wb, "D_by_year",     sheet_D)
+write_sheet(wb, "E_coverage_window", sheet_E)
 write_sheet(wb, "PPV_reverse",   sheet_PPV)
 write_sheet(wb, "QC",            sheet_QC)
 
@@ -751,5 +859,5 @@ addStyle(wb, "KEY", createStyle(fgFill = uf_orange, fontColour = "#FFFFFF",
 
 saveWorkbook(wb, out_path, overwrite = TRUE)
 message(glue("\n  Output written: {out_path}"))
-message(glue("  Sheets: KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, PPV_reverse, QC"))
+message(glue("  Sheets: KEY, A_sensitivity, B_date_diff, C_by_source, D_by_year, E_coverage_window, PPV_reverse, QC"))
 message("\n=== R/202 complete ===")

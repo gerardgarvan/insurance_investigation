@@ -8179,6 +8179,8 @@ if (nchar(p202_wb_path) == 0L) {
     "TR-VAL-202 [d4] D_by_year sheet present",
     "TR-VAL-202 [d5] PPV_reverse sheet present",
     "TR-VAL-202 [d6] QC sheet present",
+    "TR-VAL-202 [d7] E_coverage_window sheet present",
+    "TR-VAL-202 [d8] A_sensitivity renamed + not-captured split columns present",
     "TR-VAL-202 [e] suppression: '<11' present in A_sensitivity"
   )) p202_skip_fn(lbl)
 } else {
@@ -8190,7 +8192,8 @@ if (nchar(p202_wb_path) == 0L) {
     error = function(e) character(0)
   )
   expected_sheets <- c("KEY", "A_sensitivity", "B_date_diff",
-                        "C_by_source", "D_by_year", "PPV_reverse", "QC")
+                        "C_by_source", "D_by_year", "E_coverage_window",
+                        "PPV_reverse", "QC")
 
   p202_chk("TR-VAL-202 [c] KEY sheet leftmost",
     length(wb_sheets) >= 1L && wb_sheets[1] == "KEY")
@@ -8201,6 +8204,18 @@ if (nchar(p202_wb_path) == 0L) {
       p202_chk(glue("TR-VAL-202 [d] sheet '{s}' present"), s %in% wb_sheets)
     })
   }
+
+  # Renamed cumulative tiers + three not-captured tiers in A_sensitivity (names only; no data values)
+  p202_chk("TR-VAL-202 [d8] A_sensitivity renamed + not-captured split columns present", {
+    df <- tryCatch(openxlsx::read.xlsx(p202_wb_path, sheet = "A_sensitivity"),
+                   error = function(e) NULL)
+    want <- c("≤30d (incl. exact) n", "≤90d (incl. ≤30d) n",
+              "No pipeline record of this type n",
+              "Pipeline record > 90d BEFORE TR date n",
+              "Pipeline record > 90d AFTER TR date n")
+    !is.null(df) && all(make.names(want) %in% make.names(names(df))) &&
+      !any(grepl("^Not.captured.n$", names(df)))
+  })
 
   # Suppression check: read A_sensitivity and confirm at least one "<11" cell
   p202_chk("TR-VAL-202 [e] suppression '<11' present in A_sensitivity", {
@@ -8543,7 +8558,7 @@ message("  * AUTOIMMUNE-FLAG-01..05: R/88 validates Phase 192.1 autoimmune diagn
 message("  * AUTOIMMUNE-FLAG-192.2: R/88 validates Phase 192.2 ICD-9 codes + autoimmune_dx_code_system column (Section 15bb)")
 message("  * IMMUNE-FLAG-199: R/88 validates Phase 199 immune_flag / ever_brentuximab / immune_flag_dx columns 24-26 in gantt_episodes_180.csv; config keys, is_autoimmune_code() with IMMUNE_FLAG_DX_CODES, and drug token checks (Section 15bc)")
 message("  * IMMUNE-FLAG-200: Phase 200 15bc additions — [f-autoimmune] immune_flag implies has_autoimmune_dx; [g] one-directional brentuximab token check; [5a] no RXNORM_CUI guard / get_chemo_hits used; [5b] immuno_ma_codes vitamin exclusion; [5c] J8610 + Q5115/Q5119/Q5123 in chemo_hcpcs with MEDICATION_LOOKUP names")
-message("  * TR-VAL-202: Phase 202 tumor-registry treatment sensitivity — script exists, workbook KEY leftmost, expected sheets (KEY/A_sensitivity/B_date_diff/C_by_source/D_by_year/PPV_reverse/QC) present, suppression '<11' applied (Section 15be)")
+message("  * TR-VAL-202: Phase 202 tumor-registry treatment sensitivity — script exists, workbook KEY leftmost, expected sheets (KEY/A_sensitivity/B_date_diff/C_by_source/D_by_year/E_coverage_window/PPV_reverse/QC), renamed tiers + not-captured split present, suppression '<11' applied (Section 15be)")
 
 if (failed > 0) {
   if (identical(Sys.getenv("TESTTHAT"), "true")) {
