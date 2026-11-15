@@ -146,7 +146,7 @@ table_by_site <- function(tbl_name, date_col) {
                   min_date = character(), max_date = character(), link = "table not found"))
   }
   cols <- colnames(tb)
-  check_tbl_cols(tb, c("ID", date_col), tbl_name)
+  check_tbl_cols(tb, c("ID", if (!is.na(date_col) && nzchar(date_col)) date_col), tbl_name)
   if ("SOURCE" %in% cols) {
     base <- tb |> mutate(.site = SOURCE); link <- "table SOURCE"
   } else if ("ENCOUNTERID" %in% cols) {
@@ -158,14 +158,24 @@ table_by_site <- function(tbl_name, date_col) {
                   min_date = character(), max_date = character(),
                   link = "no SOURCE or ENCOUNTERID: not attributable"))
   }
-  date_sym <- rlang::sym(date_col)
-  res <- base |>
-    mutate(.d = as.character(!!date_sym)) |>
-    mutate(.d_ok = if_else(!is.na(.d) & .d >= !!SENTINEL_ISO, .d, NA_character_)) |>
-    group_by(.site) |>
-    summarise(n_rows = n(), n_patients = n_distinct(ID),
-              min_date = min(.d_ok, na.rm = TRUE), max_date = max(.d_ok, na.rm = TRUE)) |>
-    collect()
+  has_date <- !is.na(date_col) && nzchar(date_col)
+  if (has_date) {
+    # rename() + all_of() avoids !! / .data inside the lazy (dbplyr) mutate
+    res <- base |>
+      rename(.d_raw = all_of(date_col)) |>
+      mutate(.d = as.character(.d_raw)) |>
+      mutate(.d_ok = if_else(!is.na(.d) & .d >= SENTINEL_ISO, .d, NA_character_)) |>
+      group_by(.site) |>
+      summarise(n_rows = n(), n_patients = n_distinct(ID),
+                min_date = min(.d_ok, na.rm = TRUE), max_date = max(.d_ok, na.rm = TRUE)) |>
+      collect()
+  } else {
+    res <- base |>
+      group_by(.site) |>
+      summarise(n_rows = n(), n_patients = n_distinct(ID)) |>
+      collect() |>
+      mutate(min_date = NA_character_, max_date = NA_character_)
+  }
   close_pcornet_con()
   res |>
     transmute(table = tbl_name, site = coalesce(as.character(.site), "(blank)"),

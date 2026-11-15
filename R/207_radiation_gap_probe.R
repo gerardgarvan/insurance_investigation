@@ -168,15 +168,21 @@ code_class_of <- function(family) {
   dplyr::if_else(is.na(family) | family %in% OTHER_FAMILIES, CLASS_OTHER, CLASS_TREAT)
 }
 WINDOW_D <- 180L
+DX_WINDOW_MAX <- 365L   # fallback window: 0 to +365 d from TR HL diagnosis date
 
 # --- SECTION 1: POPULATION ------------------------------------------------------
 message("=== Section 1: Population (Phase 202 denominator, TR radiation given) ===")
 gantt <- vroom(p_gantt$path, col_types = cols(
   patient_id = col_character(), treatment_type = col_character(),
-  tr_hl_dx = col_logical(), .default = col_character()), show_col_types = FALSE)
+  tr_hl_dx = col_logical(), episode_start = col_date(format = ""),
+  .default = col_character()), show_col_types = FALSE)
 gantt_pts <- gantt |>
   distinct(patient_id, tr_hl_dx) |> group_by(patient_id) |> slice(1L) |> ungroup()
 pipe_rad_ids <- unique(gantt$patient_id[gantt$treatment_type %in% c("Radiation", "Proton Therapy")])
+pipe_rad_first <- gantt |>
+  filter(treatment_type %in% c("Radiation", "Proton Therapy"), !is.na(episode_start)) |>
+  group_by(patient_id) |> summarise(pipe_first_rad = min(episode_start), .groups = "drop") |>
+  rename(ID = patient_id)
 
 tr_flags <- readRDS(p_flags$path)
 stopifnot(all(c("ID", "tr_hl_dx") %in% names(tr_flags)))
@@ -206,6 +212,43 @@ cov <- tr_coverage_filter(rename(pop, tr_first_date = tr_rad_date), first_enc)
 pop$in_window <- pop$ID %in% cov$in_window$ID
 message(glue("  in EHR coverage window: {sum(pop$in_window)} (group ii: ",
              "{sum(pop$in_window & pop$group == 'ii_no_pipeline_radiation')})"))
+
+# TR HL diagnosis date (fallback anchor): earliest non-missing date across HL-histology rows.
+# Columns as in R/202 TR_DX_DATE_COLS (UFH DATE_OF_DIAGNOSIS, ORL DXDATE); used only if present.
+message("=== Section 1b: TR HL diagnosis date ===")
+TR_DX_DATE_COLS_207 <- c(UFH = "DATE_OF_DIAGNOSIS", ORL = "DXDATE")
+open_pcornet_con()
+tr_tbl <- get_pcornet_table("TUMOR_REGISTRY_ALL")
+tr_cols <- colnames(tr_tbl)
+hist_present <- intersect(TR_HIST_COLS, tr_cols)
+dx_present <- intersect(unique(TR_DX_DATE_COLS_207), tr_cols)
+tr_dx_note <- NULL
+if (!all(c("ID", "SOURCE") %in% tr_cols) || length(hist_present) == 0L || length(dx_present) == 0L) {
+  close_pcornet_con()
+  tr_dx_note <- paste0("TR dx-date fallback unavailable (missing ID/SOURCE, histology or dx-date columns; ",
+                       "dx cols present: ", paste(dx_present, collapse = ", "), ")")
+  tr_dx <- tibble(ID = character(), tr_dx_date = as.Date(character()))
+} else {
+  tr_dx_raw <- tr_tbl |> select(all_of(unique(c("ID", "SOURCE", hist_present, dx_present)))) |> collect()
+  close_pcornet_con()
+  tr_dx_hl <- tr_dx_raw |>
+    mutate(ID = as.character(ID)) |>
+    filter(if_any(all_of(hist_present),
+                  ~ substr(as.character(.x), 1, 4) %in% ICD_CODES$hl_histology),
+           ID %in% pop$ID)
+  tr_dx <- bind_rows(lapply(names(TR_DX_DATE_COLS_207), function(src) {
+    col <- TR_DX_DATE_COLS_207[[src]]
+    if (!col %in% names(tr_dx_hl)) return(tibble(ID = character(), tr_dx_date = as.Date(character())))
+    d <- tr_dx_hl[tr_dx_hl$SOURCE == src, , drop = FALSE]
+    tibble(ID = d$ID, tr_dx_date = guard_date(d[[col]]))
+  })) |>
+    filter(!is.na(tr_dx_date)) |>
+    group_by(ID) |> summarise(tr_dx_date = min(tr_dx_date), .groups = "drop")
+  rm(tr_dx_raw, tr_dx_hl)
+}
+pop <- pop |> left_join(tr_dx, by = "ID") |> left_join(pipe_rad_first, by = "ID")
+message(glue("  TR radiation date available: {sum(!is.na(pop$tr_rad_date))} of {nrow(pop)}; ",
+             "TR dx date available: {sum(!is.na(pop$tr_dx_date))}"))
 
 # --- SECTION 2: EVIDENCE QUERIES (own open/close per table) ---------------------
 check_cols <- function(tbl, need, nm) {
@@ -290,11 +333,12 @@ message(glue("  ENCOUNTER radiation-oncology provider rows (all patients): {nrow
 
 # --- SECTION 3: EVIDENCE FOR THE POPULATION (join in R) -------------------------
 ev <- bind_rows(px_ev, dx_ev, enc_ev) |>
-  inner_join(select(pop, ID, group, in_window, tr_rad_date), by = "ID") |>
+  inner_join(select(pop, ID, group, in_window, tr_rad_date, tr_dx_date), by = "ID") |>
   mutate(in_pipe   = in_pipeline(code, code_type),
          family    = code_family(code, code_type),
          code_class = code_class_of(family),
-         days_from_tr = as.integer(ev_date - tr_rad_date))
+         days_from_tr = as.integer(ev_date - tr_rad_date),
+         days_from_dx = as.integer(ev_date - tr_dx_date))
 message(glue("  evidence rows for the TR-radiation population: {nrow(ev)}"))
 
 # --- SECTION 4: SHEETS ----------------------------------------------------------
@@ -305,12 +349,15 @@ code_table <- function(d_ii, d_i) {
       summarise("patients_{sfx}" := n_distinct(ID), "records_{sfx}" := n(),
                 "n_dated_{sfx}" := sum(!is.na(days_from_tr)),
                 "n_within90d_{sfx}" := sum(!is.na(days_from_tr) & abs(days_from_tr) <= 90L),
+                "n_dx_dated_{sfx}" := sum(!is.na(days_from_dx)),
+                "median_days_from_dx_{sfx}" := if (sum(!is.na(days_from_dx)) >= 11L)
+                  as.numeric(median(days_from_dx, na.rm = TRUE)) else NA_real_,
                 "median_days_from_tr_{sfx}" := if (sum(!is.na(days_from_tr)) >= 11L)
                   as.numeric(median(days_from_tr, na.rm = TRUE)) else NA_real_,
                 .groups = "drop")
   }
   full_join(agg(d_ii, "ii"), agg(d_i, "i"), by = c("code", "code_type", "family", "code_class", "in_pipe")) |>
-    mutate(across(starts_with(c("patients_", "records_", "n_dated_", "n_within90d_")),
+    mutate(across(starts_with(c("patients_", "records_", "n_dated_", "n_within90d_", "n_dx_dated_")),
                   ~ coalesce(.x, 0L))) |>
     arrange(desc(patients_ii), desc(patients_i), code)
 }
@@ -322,7 +369,9 @@ display_code_table <- function(ct) {
               `ii: evidence dated n` = fmt_sup(n_dated_ii),
               `ii: within 90 d of registry date n` = fmt_sup(n_within90d_ii),
               `ii: within 90 d % of dated` = pct_sup(n_within90d_ii, n_dated_ii),
-              `ii: median days from registry date` = median_days_from_tr_ii,
+              `ii: median days from TR radiation date` = median_days_from_tr_ii,
+              `ii: evidence dated n (TR dx date)` = fmt_sup(n_dx_dated_ii),
+              `ii: median days from TR dx date` = median_days_from_dx_ii,
               `patients, group i (comparison)` = fmt_sup(patients_i),
               `records, group i (comparison)` = fmt_sup(records_i))
 }
@@ -340,10 +389,15 @@ summ_one <- function(pp, e, label) {
   tr_e      <- e[e$code_class == CLASS_TREAT, ]
   ids_tr    <- unique(tr_e$ID)
   ids_tr_w  <- unique(tr_e$ID[!is.na(tr_e$days_from_tr) & abs(tr_e$days_from_tr) <= WINDOW_D])
+  ids_tr_dx <- unique(tr_e$ID[!is.na(tr_e$days_from_dx) & tr_e$days_from_dx >= 0L &
+                                tr_e$days_from_dx <= DX_WINDOW_MAX])
   ids_other <- setdiff(ids_any, ids_tr)
   tibble(scope = label, n_patients = n,
          n_any = length(ids_any),
+         n_with_tr_date = sum(!is.na(pp$tr_rad_date)),
+         n_with_dx_date = sum(!is.na(pp$tr_dx_date)),
          n_tx_window = length(ids_tr_w),
+         n_tx_dx_window = length(ids_tr_dx),
          n_tx_any_time = length(ids_tr),
          n_other_only = length(ids_other),
          n_none = n - length(ids_any))
@@ -359,10 +413,14 @@ sheet_A <- sheet_A_raw |>
     `Patients (TR radiation given)` = fmt_sup(n_patients),
     `Any radiation-like evidence n` = fmt_sup(n_any),
     `Any evidence, % of patients` = pct_sup(n_any, n_patients),
-    `TREATMENT codes within +/-180 d of registry radiation date n` = fmt_sup(n_tx_window),
-    `TREATMENT codes within +/-180 d, % of patients` = pct_sup(n_tx_window, n_patients),
-    `TREATMENT codes at any time n` = fmt_sup(n_tx_any_time),
+    `TREATMENT codes at any time n (primary evidence)` = fmt_sup(n_tx_any_time),
     `TREATMENT codes at any time, % of patients` = pct_sup(n_tx_any_time, n_patients),
+    `n with TR radiation date available` = fmt_sup(n_with_tr_date),
+    `TREATMENT codes within +/-180 d of TR radiation date n (secondary; among patients with TR date)` = fmt_sup(n_tx_window),
+    `TREATMENT codes within +/-180 d, % of patients with TR date` = pct_sup(n_tx_window, n_with_tr_date),
+    `n with TR HL diagnosis date available` = fmt_sup(n_with_dx_date),
+    `TREATMENT codes 0 to +365 d of TR dx date n (secondary; all patients)` = fmt_sup(n_tx_dx_window),
+    `TREATMENT codes 0 to +365 d of TR dx date, % of patients` = pct_sup(n_tx_dx_window, n_patients),
     `SURVIVORSHIP/OTHER evidence only n (no treatment code)` = fmt_sup(n_other_only),
     `No evidence n (likely outside-network care)` = fmt_sup(n_none),
     `No evidence, % of patients` = pct_sup(n_none, n_patients))
@@ -392,6 +450,8 @@ sheet_QC <- tibble(
             "evidence rows with sentinel or missing date (< 1990 set to NA)",
             "pipeline code list sizes: CH / PX09 / PX10 prefixes / DX",
             "group sums agree (i + ii = TR radiation given)",
+            "TR HL diagnosis date available (patients, all groups)",
+            "group (i): first pipeline radiation episode date - TR radiation date, days: median (Q1 to Q3), n with both dates",
             "no patient IDs in any workbook sheet (by construction)"),
   value = c(fmt_sup(nrow(pop)), fmt_sup(sum(pop$group == "i_pipeline_radiation")),
             fmt_sup(n_ii), fmt_sup(n_ii_win),
@@ -400,6 +460,17 @@ sheet_QC <- tibble(
             fmt_sup(sum(is.na(ev$ev_date))),
             paste(length(PIPE_CH), length(PIPE_PX09), length(PIPE_PX10), length(PIPE_DX), sep = " / "),
             as.character(sum(pop$group == "i_pipeline_radiation") + n_ii == nrow(pop)),
+            paste0(fmt_sup(sum(!is.na(pop$tr_dx_date))),
+                   if (!is.null(tr_dx_note)) paste0(" [", tr_dx_note, "]") else ""),
+            {
+              d_i <- pop |>
+                filter(group == "i_pipeline_radiation", !is.na(pipe_first_rad), !is.na(tr_rad_date)) |>
+                mutate(dd = as.integer(pipe_first_rad - tr_rad_date)) |> pull(dd)
+              if (length(d_i) < 11L) "n < 11 (suppressed)" else {
+                q <- stats::quantile(d_i, c(0.25, 0.5, 0.75), names = FALSE)
+                sprintf("%.0f (%.0f to %.0f), n = %s", q[2], q[1], q[3], fmt_sup(length(d_i)))
+              }
+            },
             "TRUE"))
 
 sheet_KEY <- tibble(
@@ -418,8 +489,8 @@ sheet_KEY <- tibble(
     "PROCEDURES: CPT 77xxx and HCPCS G6001-G6017, G0339, G0340, Q3001 (PX_TYPE CH); ICD-10-PCS D* (10); ICD-9 92.2x (09); revenue 033x (RE). DIAGNOSIS: Z51.0, V58.0, Z92.3, V15.3. ENCOUNTER: radiation-oncology provider.",
     "TREATMENT_CODES radiation_cpt, proton_cpt, radiation_icd9, radiation_icd10pcs_prefixes, radiation_dx_icd10/icd9 plus DRUG_GROUPINGS Radiation. Revenue codes and Z92.3 / V15.3 / specialty are in no pipeline list.",
     if (is.null(enc_note)) "Radiation-oncology provider = PROVIDER_SPECIALTY_PRIMARY 2085R0001X (PROVIDER_SPECIALTIES). ENC_TYPE has no radiation value in PCORnet CDM, so it is not used." else as.character(enc_note),
-    "Evidence dates before 1990-01-01 are treated as missing. Days from registry radiation date = evidence date - TR first radiation date.",
-    "Per scope: patients with TREATMENT codes within +/-180 d of the registry radiation date, with TREATMENT codes at any time (incl. undated), with SURVIVORSHIP/OTHER evidence only, and with no evidence. TREATMENT evidence counts all searched codes, whether or not in a pipeline list.",
+    "Evidence dates before 1990-01-01 are treated as missing. Days from TR radiation date = evidence date - TR first radiation date; days from TR dx date = evidence date - earliest TR HL diagnosis date (UFH DATE_OF_DIAGNOSIS, ORL DXDATE). Sheets B and C show both medians (suppressed if n < 11).",
+    "Per scope. PRIMARY evidence = patients with TREATMENT codes at any time (incl. undated): group ii <11 vs group i 33/33 (read the counts in the rows). SECONDARY = window rows. Many group ii patients have no TR radiation date (see 'n with TR radiation date available'), so the +/-180 d test is shown only among patients with a TR radiation date, denominator = n with TR radiation date. Fallback window: TREATMENT codes 0 to +365 d of the TR HL diagnosis date, all patients, reported separately for group i and group ii. Also SURVIVORSHIP/OTHER evidence only, and no evidence. TREATMENT evidence counts all searched codes, whether or not in a pipeline list.",
     "Candidate codes to add: codes for group (ii) patients that are in no pipeline list. Counts and median days from the registry date; group (i) shown for comparison.",
     "Codes already in the pipeline lists but present for group (ii) patients. Non-empty = possible extraction or episode-building gap.",
     "Evidence by record SOURCE (site) and table.",
