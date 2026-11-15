@@ -4537,11 +4537,17 @@ REGIMEN_DICT <- list(
     maintenance = FALSE,
     note        = "ABVE-PC/OEPA-COPDAC/BV-AVEPC — SME confirmation needed (REGL-06)"
   ),
-  NLPHL = list(
-    drugs       = c("Rituximab"),
+  # NLPHL is a diagnosis, not a regimen; replaced by the rituximab regimen families.
+  # Order matters (first match wins): R-CHOP before R-CVP before Rituximab_mono.
+  `R-CHOP` = list(
+    drugs       = c("Rituximab", "Cyclophosphamide", "Doxorubicin", "Vincristine", "Prednisone"),
     exclusive   = FALSE,
-    maintenance = FALSE,
-    note        = "R-CHOP/R-CVP/rituximab mono — NLPHL handling open (REGL-06)"
+    maintenance = FALSE
+  ),
+  `R-CVP` = list(
+    drugs       = c("Rituximab", "Cyclophosphamide", "Vincristine", "Prednisone"),
+    exclusive   = TRUE,
+    maintenance = FALSE
   ),
   Salvage = list(
     drugs       = c("Ifosfamide", "Carboplatin", "Etoposide"),
@@ -4549,11 +4555,21 @@ REGIMEN_DICT <- list(
     maintenance = FALSE,
     note        = "ICE/GVD/IGEV/BV-bendamustine/BV-nivolumab/pembro/nivo — SME list needed (REGL-06)"
   ),
-  BV_consolidation = list(
-    drugs       = c("Brentuximab Vedotin"),
+  Rituximab_mono = list(
+    drugs       = c("Rituximab"),
     exclusive   = TRUE,
-    maintenance = TRUE,
-    note        = "BV mono post-SCT consolidation — classification open (REGL-06)"
+    maintenance = TRUE
+  ),
+  BV_consolidation = list(
+    drugs            = c("Brentuximab Vedotin"),
+    exclusive        = TRUE,
+    maintenance      = TRUE,
+    requires_prior_sct = TRUE,
+    note             = "BV mono only when an SCT episode precedes it within BV_CONSOLIDATION_SCT_WINDOW_DAYS (REGL-06-C)"
   )
 )
+
+# BV consolidation must start on/after an SCT episode start and no later than
+# SCT episode stop + this many days. Assumed default = LOT_GAP_DAYS (REGL-06-C).
+BV_CONSOLIDATION_SCT_WINDOW_DAYS <- 90L
 # ==============================================================================

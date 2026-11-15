@@ -54,75 +54,153 @@ match_regimen_family <- function(canonical_drugs, family_def) {
 }
 
 
+# Treatment types that can carry a regimen label. Radiation, SCT and Proton
+# episodes always get NA. Episode numbers are unique only within
+# (ID, treatment_type), so treatment_type is part of every join key.
+REGIMEN_SYSTEMIC_TYPES    <- c("Chemotherapy", "Immunotherapy")
+REGIMEN_UNRECOGNIZED_LABEL <- "Unrecognized systemic"
+
+
+# ------------------------------------------------------------------------------
+# label_one_regimen_episode()
+# Internal helper: label a single systemic episode.
+#
+# Args:
+#   pooled_drugs  drugs (Chemotherapy + Immunotherapy rows of the patient) within
+#                 the window of the episode start
+#   own_drugs     subset of pooled_drugs recorded on this episode's own type
+#   ep_type       "Chemotherapy" or "Immunotherapy"
+#   post_sct      TRUE if an SCT episode precedes this episode within the window
+#   regimen_dict  REGIMEN_DICT
+#
+# Returns: family name, REGIMEN_UNRECOGNIZED_LABEL, or NA_character_
+#   - Chemotherapy: matched family; else "Unrecognized systemic" if any drug name
+#     is present; else NA.
+#   - Immunotherapy: matched family only when every drug on the episode belongs
+#     to the matched family; otherwise NA.
+# ------------------------------------------------------------------------------
+label_one_regimen_episode <- function(pooled_drugs, own_drugs, ep_type,
+                                      post_sct, regimen_dict) {
+  matched <- NA_character_
+  for (family_name in names(regimen_dict)) {
+    fam <- regimen_dict[[family_name]]
+    if (isTRUE(fam$requires_prior_sct) && !isTRUE(post_sct)) next
+    if (match_regimen_family(pooled_drugs, fam)) {
+      matched <- family_name
+      break
+    }
+  }
+
+  if (!is.na(matched)) {
+    if (identical(ep_type, "Immunotherapy")) {
+      in_family <- length(own_drugs) > 0L &&
+        all(tolower(own_drugs) %in% tolower(regimen_dict[[matched]]$drugs))
+      return(if (in_family) matched else NA_character_)
+    }
+    return(matched)
+  }
+
+  if (identical(ep_type, "Chemotherapy") && length(pooled_drugs) > 0L) {
+    return(REGIMEN_UNRECOGNIZED_LABEL)
+  }
+  NA_character_
+}
+
+
 # ------------------------------------------------------------------------------
 # assign_regimen()
 # REGL-01, REGL-02, REGL-04
 #
-# Given a date-level drug administration data frame, identifies which regimen
-# family each episode belongs to by matching the drugs present within
-# window_days of the episode start date against REGIMEN_DICT.
-#
-# Treatment type filtering: immunotherapy rows ARE processed alongside
-# chemotherapy rows (REGL-04 — BV, nivolumab are immuno-chemo combos).
+# Labels each systemic-therapy episode (Chemotherapy, Immunotherapy) by matching
+# the drugs present within window_days of the episode start against
+# REGIMEN_DICT. Drugs are pooled across the patient's Chemotherapy and
+# Immunotherapy rows so combinations such as BV+AVD (BV is Immunotherapy, AVD is
+# Chemotherapy) are recognised; each episode is still labeled under its own
+# (ID, treatment_type, episode_number) key.
 #
 # Args:
 #   date_level_df  data frame with columns:
-#                    ID             patient identifier
-#                    treatment_date Date — drug administration date
-#                    treatment_type character — e.g. "Chemotherapy", "Immunotherapy"
-#                    canonical_drug character — canonical drug name
-#                    episode_number integer or character — episode identifier
-#                    start_date     Date — episode start date
+#                    ID, treatment_date (Date), treatment_type, canonical_drug,
+#                    episode_number, start_date (Date)
+#   regimen_dict   named list; defaults to REGIMEN_DICT. Families with
+#                  requires_prior_sct = TRUE match only after an SCT episode.
+#   window_days    half-width of concurrency window in days
+#   sct_df         NULL or data frame (ID, sct_start, sct_stop) of SCT episodes
+#   sct_window_days  days after sct_stop within which BV consolidation may start
 #
-#   regimen_dict   named list — defaults to REGIMEN_DICT from R/00_config.R
-#   window_days    integer — half-width of concurrency window in days;
-#                  defaults to CONCURRENCY_WINDOW_DAYS
-#
-# Returns: tibble with one row per (ID, episode_number):
-#   ID, episode_number, regimen_label (character)
+# Returns: tibble, one row per systemic (ID, treatment_type, episode_number):
+#   ID, treatment_type, episode_number, regimen_label (NA where no regimen)
 # ------------------------------------------------------------------------------
 assign_regimen <- function(date_level_df,
-                           regimen_dict  = REGIMEN_DICT,
-                           window_days   = CONCURRENCY_WINDOW_DAYS) {
+                           regimen_dict    = REGIMEN_DICT,
+                           window_days     = CONCURRENCY_WINDOW_DAYS,
+                           sct_df          = NULL,
+                           sct_window_days = if (exists("BV_CONSOLIDATION_SCT_WINDOW_DAYS"))
+                             BV_CONSOLIDATION_SCT_WINDOW_DAYS else 90L) {
 
   stopifnot(
     is.data.frame(date_level_df),
-    all(c("ID", "treatment_date", "canonical_drug",
+    all(c("ID", "treatment_date", "treatment_type", "canonical_drug",
           "episode_number", "start_date") %in% names(date_level_df)),
     is.numeric(window_days) || is.integer(window_days),
-    length(window_days) == 1L
+    length(window_days) == 1L,
+    is.null(sct_df) || (is.data.frame(sct_df) &&
+      all(c("ID", "sct_start", "sct_stop") %in% names(sct_df)))
   )
 
-  # For each episode, collect drugs within the concurrency window.
-  episode_drugs <- date_level_df %>%
-    dplyr::mutate(
-      days_from_start = as.integer(.data$treatment_date - .data$start_date)
-    ) %>%
-    dplyr::filter(
-      .data$days_from_start >= -as.integer(window_days) &
-      .data$days_from_start <=  as.integer(window_days)
-    ) %>%
-    dplyr::group_by(.data$ID, .data$episode_number) %>%
+  sys_rows <- date_level_df %>%
+    dplyr::filter(.data$treatment_type %in% REGIMEN_SYSTEMIC_TYPES,
+                  !is.na(.data$canonical_drug))
+
+  ep_keys <- sys_rows %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number) %>%
+    dplyr::summarise(start_date = .data$start_date[1L], .groups = "drop")
+
+  pool <- sys_rows %>%
+    dplyr::select("ID", pool_date = "treatment_date",
+                  pool_type = "treatment_type", pool_drug = "canonical_drug")
+
+  episode_drugs <- ep_keys %>%
+    dplyr::inner_join(pool, by = "ID", relationship = "many-to-many") %>%
+    dplyr::mutate(days_from_start = as.integer(.data$pool_date - .data$start_date)) %>%
+    dplyr::filter(abs(.data$days_from_start) <= as.integer(window_days)) %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number,
+                    .data$start_date) %>%
     dplyr::summarise(
-      drugs_in_window = list(unique(.data$canonical_drug[!is.na(.data$canonical_drug)])),
+      pooled_drugs = list(unique(.data$pool_drug)),
+      own_drugs    = list(unique(.data$pool_drug[.data$pool_type == dplyr::first(.data$treatment_type)])),
       .groups = "drop"
     )
 
-  # Match each episode's drug set against REGIMEN_DICT in order.
-  episode_drugs <- episode_drugs %>%
-    dplyr::mutate(
-      regimen_label = vapply(.data$drugs_in_window, function(drug_vec) {
-        for (family_name in names(regimen_dict)) {
-          if (match_regimen_family(drug_vec, regimen_dict[[family_name]])) {
-            return(family_name)
-          }
-        }
-        "Other"
-      }, character(1L))
-    ) %>%
-    dplyr::select("ID", "episode_number", "regimen_label")
+  # post_sct flag per episode: an SCT episode started before and ended within
+  # sct_window_days of this episode's start.
+  if (!is.null(sct_df) && nrow(sct_df) > 0L) {
+    sct_flag <- episode_drugs %>%
+      dplyr::select("ID", "treatment_type", "episode_number", "start_date") %>%
+      dplyr::inner_join(sct_df, by = "ID", relationship = "many-to-many") %>%
+      dplyr::filter(.data$start_date >= .data$sct_start,
+                    .data$start_date <= .data$sct_stop + as.integer(sct_window_days)) %>%
+      dplyr::distinct(.data$ID, .data$treatment_type, .data$episode_number) %>%
+      dplyr::mutate(post_sct = TRUE)
+    episode_drugs <- dplyr::left_join(
+      episode_drugs, sct_flag,
+      by = c("ID", "treatment_type", "episode_number"))
+    episode_drugs$post_sct <- dplyr::coalesce(episode_drugs$post_sct, FALSE)
+  } else {
+    episode_drugs$post_sct <- FALSE
+  }
 
-  episode_drugs
+  episode_drugs$regimen_label <- vapply(seq_len(nrow(episode_drugs)), function(i) {
+    label_one_regimen_episode(
+      pooled_drugs = episode_drugs$pooled_drugs[[i]],
+      own_drugs    = episode_drugs$own_drugs[[i]],
+      ep_type      = episode_drugs$treatment_type[i],
+      post_sct     = episode_drugs$post_sct[i],
+      regimen_dict = regimen_dict)
+  }, character(1L))
+
+  episode_drugs %>%
+    dplyr::select("ID", "treatment_type", "episode_number", "regimen_label")
 }
 
 

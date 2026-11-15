@@ -5,7 +5,7 @@
 #   REGL-01: All 10 REGIMEN_DICT families detected correctly on synthetic data
 #   REGL-02: Concurrency window enforcement (drugs outside window not counted)
 #   Exclusive flag: extra chemo agent disqualifies a family match
-#   Unknown combination → "Other"
+#   Systemic-only labels; no "Other"/"NLPHL"; BV_consolidation needs prior SCT
 # ==============================================================================
 
 # Source config (provides REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS) ──────────────
@@ -43,11 +43,17 @@ if (!exists("REGIMEN_DICT")) {
     Pediatric = list(drugs = c("Doxorubicin", "Vincristine", "Etoposide",
                                 "Prednisone", "Cyclophosphamide"),
                      exclusive = FALSE, maintenance = FALSE),
-    NLPHL = list(drugs = c("Rituximab"), exclusive = FALSE, maintenance = FALSE),
+    `R-CHOP` = list(drugs = c("Rituximab", "Cyclophosphamide", "Doxorubicin",
+                               "Vincristine", "Prednisone"),
+                     exclusive = FALSE, maintenance = FALSE),
+    `R-CVP` = list(drugs = c("Rituximab", "Cyclophosphamide", "Vincristine", "Prednisone"),
+                    exclusive = TRUE, maintenance = FALSE),
     Salvage = list(drugs = c("Ifosfamide", "Carboplatin", "Etoposide"),
                    exclusive = FALSE, maintenance = FALSE),
+    Rituximab_mono = list(drugs = c("Rituximab"), exclusive = TRUE, maintenance = TRUE),
     BV_consolidation = list(drugs = c("Brentuximab Vedotin"),
-                             exclusive = TRUE, maintenance = TRUE)
+                             exclusive = TRUE, maintenance = TRUE,
+                             requires_prior_sct = TRUE)
   )
 }
 if (!exists("CONCURRENCY_WINDOW_DAYS")) CONCURRENCY_WINDOW_DAYS <- 7L
@@ -102,12 +108,20 @@ test_that("REGL-01: BV+AVD — Brentuximab Vedotin + AVD drugs returns BV+AVD", 
   expect_equal(result$regimen_label, "BV+AVD")
 })
 
-# ── REGL-01: NLPHL ────────────────────────────────────────────────────────────
-test_that("REGL-01: NLPHL — Rituximab alone returns NLPHL", {
+# ── REGL-01: Rituximab families (NLPHL is a diagnosis, not a regimen) ──────────
+test_that("REGL-01: Rituximab alone returns Rituximab_mono, never NLPHL", {
   df <- make_episode_df(c("Rituximab"))
   result <- assign_regimen(df, regimen_dict = REGIMEN_DICT,
                            window_days = CONCURRENCY_WINDOW_DAYS)
-  expect_equal(result$regimen_label, "NLPHL")
+  expect_equal(result$regimen_label, "Rituximab_mono")
+})
+
+test_that("REGL-01: R-CHOP and R-CVP are distinguished", {
+  chop <- make_episode_df(c("Rituximab", "Cyclophosphamide", "Doxorubicin",
+                            "Vincristine", "Prednisone"))
+  cvp  <- make_episode_df(c("Rituximab", "Cyclophosphamide", "Vincristine", "Prednisone"))
+  expect_equal(assign_regimen(chop, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)$regimen_label, "R-CHOP")
+  expect_equal(assign_regimen(cvp,  REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)$regimen_label, "R-CVP")
 })
 
 # ── REGL-01: Salvage (ICE) ────────────────────────────────────────────────────
@@ -118,21 +132,76 @@ test_that("REGL-01: Salvage — Ifosfamide + Carboplatin + Etoposide returns Sal
   expect_equal(result$regimen_label, "Salvage")
 })
 
-# ── Unknown combination → Other ───────────────────────────────────────────────
-test_that("REGL-01: Unknown drug combination returns Other", {
+# ── No match: Unrecognized systemic (chemo) or NA (never "Other") ─────────────
+test_that("Unknown chemotherapy combination returns 'Unrecognized systemic'", {
   df <- make_episode_df(c("Methotrexate", "Ipilimumab"))
   result <- assign_regimen(df, regimen_dict = REGIMEN_DICT,
                            window_days = CONCURRENCY_WINDOW_DAYS)
-  expect_equal(result$regimen_label, "Other")
+  expect_equal(result$regimen_label, "Unrecognized systemic")
 })
 
-# ── Exclusive flag: extra chemo agent disqualifies ABVD ───────────────────────
-test_that("REGL-01: Exclusive — ABVD + extra chemo agent returns Other (not ABVD)", {
+test_that("Exclusive: ABVD + extra chemo agent is not ABVD and not 'Other'", {
   df <- make_episode_df(c("Doxorubicin", "Bleomycin", "Vinblastine",
                            "Dacarbazine", "Etoposide"))
   result <- assign_regimen(df, regimen_dict = REGIMEN_DICT,
                            window_days = CONCURRENCY_WINDOW_DAYS)
-  expect_equal(result$regimen_label, "Other")
+  expect_false(result$regimen_label %in% c("ABVD", "Other"))
+})
+
+# ── Non-systemic episodes are never labeled ────────────────────────────────────
+test_that("Radiation, SCT and Proton episodes get no label (not in output)", {
+  for (tp in c("Radiation", "SCT", "Proton")) {
+    df <- make_episode_df(c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine"),
+                          type = tp)
+    result <- assign_regimen(df, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
+    expect_equal(nrow(result), 0L)
+  }
+})
+
+test_that("Same episode_number across types: radiation does not inherit chemo label", {
+  chemo <- make_episode_df(c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine"))
+  rad   <- make_episode_df("Doxorubicin", type = "Radiation")  # ep_num 1 as well
+  result <- assign_regimen(dplyr::bind_rows(chemo, rad), REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
+  expect_equal(result$treatment_type, "Chemotherapy")
+  expect_equal(result$regimen_label, "ABVD")
+})
+
+# ── Immunotherapy: labeled only when part of a defined regimen ────────────────
+test_that("Immunotherapy BV episode alongside AVD chemo is BV+AVD on both episodes", {
+  chemo <- make_episode_df(c("Doxorubicin", "Vinblastine", "Dacarbazine"))
+  immu  <- make_episode_df("Brentuximab Vedotin", type = "Immunotherapy")
+  result <- assign_regimen(dplyr::bind_rows(chemo, immu), REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
+  expect_true(all(result$regimen_label == "BV+AVD"))
+  expect_equal(sort(result$treatment_type), c("Chemotherapy", "Immunotherapy"))
+})
+
+test_that("Immunotherapy agent outside any regimen gets NA", {
+  df <- make_episode_df("Pembrolizumab", type = "Immunotherapy")
+  result <- assign_regimen(df, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
+  expect_true(is.na(result$regimen_label))
+})
+
+# ── BV_consolidation requires SCT within window ───────────────────────────────
+test_that("BV alone without SCT is NA, with SCT inside window is BV_consolidation", {
+  bv <- make_episode_df("Brentuximab Vedotin", type = "Immunotherapy",
+                        start_date = as.Date("2022-03-01"))
+  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)$regimen_label))
+
+  sct_near <- tibble::tibble(ID = "P001", sct_start = as.Date("2022-01-15"),
+                             sct_stop = as.Date("2022-01-20"))
+  expect_equal(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
+                              sct_df = sct_near, sct_window_days = 90L)$regimen_label,
+               "BV_consolidation")
+
+  sct_far <- tibble::tibble(ID = "P001", sct_start = as.Date("2021-01-01"),
+                            sct_stop = as.Date("2021-01-10"))
+  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
+                                   sct_df = sct_far, sct_window_days = 90L)$regimen_label))
+
+  sct_after <- tibble::tibble(ID = "P001", sct_start = as.Date("2022-06-01"),
+                              sct_stop = as.Date("2022-06-05"))
+  expect_true(is.na(assign_regimen(bv, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS,
+                                   sct_df = sct_after, sct_window_days = 90L)$regimen_label))
 })
 
 # ── REGL-02: Window enforcement ───────────────────────────────────────────────
@@ -145,5 +214,5 @@ test_that("REGL-02: Drug administered outside window is not counted toward regim
   result <- assign_regimen(df, regimen_dict = REGIMEN_DICT,
                            window_days = CONCURRENCY_WINDOW_DAYS)
   # Without Dacarbazine in window: not ABVD (exclusive) and not AVD (Bleomycin present)
-  expect_true(result$regimen_label != "ABVD")
+  expect_false(result$regimen_label %in% "ABVD")
 })

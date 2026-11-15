@@ -65,6 +65,36 @@ stopifnot(
 )
 
 
+# --- SECTION 1B: REGIMEN LABEL QC (regimen_label x treatment_type) ----
+
+stopifnot("treatment_type" %in% names(episodes))
+# Local copies: the config/utils above are sourced into throwaway environments.
+R205_SYSTEMIC_TYPES <- c("Chemotherapy", "Immunotherapy")
+R205_UNREC_LABEL    <- "Unrecognized systemic"
+qc_tab <- episodes %>%
+  dplyr::mutate(regimen_label = dplyr::coalesce(regimen_label, "(none)")) %>%
+  dplyr::count(treatment_type, regimen_label, name = "n") %>%
+  dplyr::mutate(n_display = ifelse(n < 11L, "<11", as.character(n))) %>%
+  dplyr::select(treatment_type, regimen_label, n_display)
+message("[R/205] QC regimen_label x treatment_type (counts 1-10 shown as <11):")
+print(as.data.frame(qc_tab), row.names = FALSE)
+
+n_nonsys_labeled <- sum(!is.na(episodes$regimen_label) &
+                        !episodes$treatment_type %in% R205_SYSTEMIC_TYPES)
+if (n_nonsys_labeled > 0L) {
+  stop("[R/205] QC FAIL: ", n_nonsys_labeled,
+       " non-systemic episodes carry a regimen_label (stale stage2 RDS? re-run R/28)")
+}
+n_other <- sum(episodes$regimen_label %in% "Other", na.rm = TRUE)
+n_immuno_unrec <- sum(episodes$treatment_type == "Immunotherapy" &
+                      episodes$regimen_label %in% R205_UNREC_LABEL)
+if (n_other > 0L || n_immuno_unrec > 0L) {
+  stop("[R/205] QC FAIL: legacy 'Other' label present (", n_other, ") or Immunotherapy ",
+       "episodes labeled '", R205_UNREC_LABEL, "' (", n_immuno_unrec, ")")
+}
+message("[R/205] QC PASS: labels only on Chemotherapy/Immunotherapy episodes")
+
+
 # --- SECTION 2: ASSIGN LOT ----
 
 # SCT dates: TODO — load once schema probe for SCT table is available (REGL-06-B).

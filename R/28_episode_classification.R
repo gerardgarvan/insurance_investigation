@@ -348,12 +348,20 @@ date_level_drugs <- episode_detail %>%
 message(glue("  date_level_drugs: {nrow(date_level_drugs)} rows, {dplyr::n_distinct(date_level_drugs$ID)} patients"))
 
 # Assign regimen labels via dictionary matching. REGL-01, REGL-02, REGL-04.
+# SCT episodes anchor the BV_consolidation rule (BV only after SCT within window).
+sct_episodes <- episodes %>%
+  dplyr::filter(treatment_type == "SCT") %>%
+  dplyr::select(ID = patient_id, sct_start = episode_start, sct_stop = episode_stop)
+
 regimen_assignments <- assign_regimen(
-  date_level_df = date_level_drugs,
-  regimen_dict  = REGIMEN_DICT,
-  window_days   = CONCURRENCY_WINDOW_DAYS
+  date_level_df   = date_level_drugs,
+  regimen_dict    = REGIMEN_DICT,
+  window_days     = CONCURRENCY_WINDOW_DAYS,
+  sct_df          = sct_episodes,
+  sct_window_days = BV_CONSOLIDATION_SCT_WINDOW_DAYS
 )
-# regimen_assignments columns: ID, episode_number, regimen_label
+# regimen_assignments columns: ID, treatment_type, episode_number, regimen_label
+# episode_number is unique only within (patient_id, treatment_type): join on all three.
 
 # Drop prior regimen_label to prevent .x/.y suffixes on re-run.
 if ("regimen_label" %in% names(episodes)) {
@@ -363,12 +371,17 @@ episodes <- episodes %>%
   dplyr::left_join(
     regimen_assignments %>%
       dplyr::rename(patient_id = ID) %>%
-      dplyr::select(patient_id, episode_number, regimen_label),
-    by = c("patient_id", "episode_number")
+      dplyr::select(patient_id, treatment_type, episode_number, regimen_label),
+    by = c("patient_id", "treatment_type", "episode_number")
   )
 
 n_labeled <- sum(!is.na(episodes$regimen_label))
 message(glue("  Phase 205 regimen_label: {n_labeled} episodes labeled (of {nrow(episodes)} total)"))
+n_bad_label <- sum(!is.na(episodes$regimen_label) &
+                   !episodes$treatment_type %in% REGIMEN_SYSTEMIC_TYPES)
+if (n_bad_label > 0L) {
+  stop("[R/28] regimen_label set on ", n_bad_label, " non-systemic episodes")
+}
 
 # Assign line of therapy. REGL-03, REGL-04.
 # SCT dates: TODO — load once schema probe for SCT table is available (REGL-06-B).
@@ -1128,5 +1141,8 @@ message("\n=== Phase 61 Complete ===")
 message(glue("  Episodes enriched: {nrow(episodes)}"))
 message(glue("  Cancer linkage: {n_encounter_linked} encounter_id, {n_temporal_linked} closest_date, {n_none} none"))
 message(glue("  Hodgkin episodes: {sum(episodes$is_hodgkin)}"))
-message(glue("  Regimens: {n_abvd} ABVD, {n_bv} BV+AVD, {n_nivo} Nivo+AVD"))
+reg_counts <- table(dplyr::coalesce(episodes$regimen_label, "(none)"))
+message("  Regimens (regimen_label): ",
+        paste0(names(reg_counts), "=", ifelse(reg_counts < 11L, "<11", as.character(reg_counts)),
+               collapse = "; "))
 message(glue("  Outputs: {basename(out_rds)} (enriched), {basename(OUTPUT_XLSX)}, {basename(OUTPUT_CSV)}"))
