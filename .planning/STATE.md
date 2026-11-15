@@ -24,8 +24,8 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 205 (regimen-line-of-therapy-engine) — code written; NOT run on HiPerGator; pending scope review after 202-204 results
-Plan: 3 of 3 (205-03 not executed)
+Phase: 205 (regimen-line-of-therapy-engine) — CANDIDATE BUILT, NOT SHIPPED (HiPerGator run 5, 2026-11-14; QC all pass; candidate in output/internal/p205_candidate_v4; delivered files remain Phase 204 versions)
+Plan: 3 of 3 (205-03 R/88 section not executed; ship decision pending team review)
 Status: Phases 202, 203, 204 COMPLETE 2026-11-14 (204 caveat: plan 204-03 R/88 section not executed)
 Last activity: 2026-11-14
 
@@ -75,6 +75,7 @@ Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_
 ### Open Decisions (v3.14)
 
 - **D-201-01..04:** see Phase 201 Findings above (all open).
+- **D-205 (run 5):** D-201-01 supportive agents out of ABVD_PLUS (proposed yes); ABVD/AVD partial out of ever_abvd (proposed yes); NHL-family first-line (383 patients) vs D-203-02; LOT restart 365 d; ship 205 gantt_episodes_180.csv over delivered? See phases/205-*/REGL-06-decisions.md, 205-TEAM-SUMMARY.md.
 - **D-203-01:** NOTX-05 "treatment observable" eligibility rule is documented in R/203 sheet D_candidate_rules and NOT applied as a filter. Open.
 - **D-203-02 (cohort definition, out of scope for v3.14):** Even claims-based FLM has about 1/3 untreated among observable patients (USF 79%, EMY 57%, AVH 55%, UCI 48%, AMS 45%, UFH 43%, UMI 37%, FLM 33%, UAB 31%). Many of the 2,085 unexplained no_tx patients (64.2%) may be prevalent cases or unconfirmed diagnoses rather than untreated incident HL. Consider requiring diagnostic workup (biopsy / PET near dx) or excluding history-of-HL-only patients for treatment analyses. No change to cohort membership.
 

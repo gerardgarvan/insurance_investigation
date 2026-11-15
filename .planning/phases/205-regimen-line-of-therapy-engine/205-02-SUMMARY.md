@@ -121,3 +121,7 @@ Commits confirmed:
 - 5435667 (Task 1 — R/28)
 - fbf8f3b (Task 2 — R/142 + R/205)
 - 53d8a2f (Task 3 — R/88)
+
+## Run 5 close-out (2026-11-14)
+
+- HiPerGator run 5 (commit 466b0f9): R/28, R/142, R/205 completed; QC all pass. Candidate NOT shipped; see `205-VERIFICATION.md`, `205-TEAM-SUMMARY.md`, `REGL-06-decisions.md`.

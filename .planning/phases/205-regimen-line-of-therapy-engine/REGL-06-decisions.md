@@ -171,3 +171,24 @@ source("R/205_lot_output.R", local = new.env(parent = globalenv()))
 | REGL-06-J | Do "ABVD/AVD partial" episodes count toward `ever_abvd`? | Not counted (unchanged) | OPEN |
 | REGL-06-K2 | NHL-family first-line regimens (R-CHOP 115, CHOP 108, Bendamustine 82, BR 48 patients) suggest non-HL or composite cases | Still in REGIMEN_FIRST_LINE_LABELS; report separately, no exclusion implemented | OPEN, report separately |
 | D-205-LOT-RESTART | Same-family restart threshold for a new line | 365 days (`LOT_SAME_FAMILY_RESTART_DAYS`) | OPEN, confirm |
+
+## Run 5 close-out (2026-11-14, HiPerGator run 5 = commit 466b0f9, results in output/internal/p205_candidate_v4)
+
+Status: CANDIDATE BUILT, NOT SHIPPED. Delivered/live files remain the Phase 204 versions (backup: output/internal/pre205_run_backup).
+
+- QC all pass: 0 unlabelled systemic episodes; 0 non-systemic labels; 0 chemo episodes with BV / PD-1-only labels lacking those agents.
+- Unrecognized systemic about 19% of systemic episodes (mostly single agents / fragments, MTX alone, bevacizumab / obinutuzumab).
+- Reconciliation vs 204 (180d): ABVD 1108/1109; AVD 236/236; Nivo+AVD 42/42; BV+AVD 242/251 (13 differ: supportive leuprolide / goserelin and edge cases); ABVD_PLUS 166/186 (16 -> ABVD); ever_abvd 1230 -> 1250 (1229 in both); first-chemo ABVD 1176 -> 1195.
+- LOT (new line on family change or same-family restart >= 365 d): 2940 patients with a recognized line; n_lines 1 = 2313, 2 = 339, 3 = 150, 4 = 79, > 4 = 59.
+- Known limitation: concurrent BV + bendamustine (and similar chemo + immunotherapy combos) are recorded as separate Chemotherapy and Immunotherapy episodes, alternate families, and inflate LOT for a small group (about 2%). Future fix: recognize cross-type combos (BV+Benda, Nivo+ICE, etc.) before LOT.
+
+### Open team decisions (run 5 close-out)
+
+| ID | Question | Proposed | Status |
+|----|----------|----------|--------|
+| D-201-01 | Exclude supportive agents (GnRH agonists) from ABVD_PLUS? | Yes | OPEN, confirm |
+| REGL-06-J | "ABVD/AVD partial" excluded from `ever_abvd`? | Yes | OPEN, confirm |
+| REGL-06-K2 | NHL-family first-line (R-CHOP, CHOP, CHOEP, Bendamustine mono, BR; 383 patients) suggests non-HL or composite cases; review against D-203-02 cohort definition | Report separately; no exclusion | OPEN |
+| D-205-LOT-RESTART | Same-family restart threshold 365 d | 365 | OPEN, confirm |
+| D-205-SHIP | Replace delivered gantt_episodes_180.csv with the 205 version? | Pending team review of the above | OPEN |
+| D-205-XTYPE | Recognize cross-type combos (BV+Benda, Nivo+ICE) before LOT | Future phase | OPEN |
