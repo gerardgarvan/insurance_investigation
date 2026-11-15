@@ -35,3 +35,8 @@ Concurrent BV + bendamustine and similar chemotherapy + immunotherapy combinatio
 5. Replace the delivered `gantt_episodes_180.csv` with the 205 version?
 
 Detail: `REGL-06-decisions.md`, `205-VERIFICATION.md`.
+
+## Decisions received 2026-11-14
+
+- D-201-01 = NO (GnRH agonists do not make ABVD_PLUS) and 205-2 = NO (partial not in `ever_abvd`) are applied to the delivered `gantt_episodes_180.csv` by `R/206_apply_decisions_gantt180.R` (pre-decisions copy: `output/internal/gantt_episodes_180_pre_decisions_20261114.csv`). The full 205 replacement is not shipped.
+- All other items above are deferred to 2026-12-07.

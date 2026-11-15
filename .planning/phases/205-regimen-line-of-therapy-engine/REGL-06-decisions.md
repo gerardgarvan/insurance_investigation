@@ -192,3 +192,12 @@ Status: CANDIDATE BUILT, NOT SHIPPED. Delivered/live files remain the Phase 204 
 | D-205-LOT-RESTART | Same-family restart threshold 365 d | 365 | OPEN, confirm |
 | D-205-SHIP | Replace delivered gantt_episodes_180.csv with the 205 version? | Pending team review of the above | OPEN |
 | D-205-XTYPE | Recognize cross-type combos (BV+Benda, Nivo+ICE) before LOT | Future phase | OPEN |
+
+## Team decisions recorded 2026-11-14 (Gerard)
+
+| ID | Decision | Effect |
+|----|----------|--------|
+| D-201-01 | **NO**: supportive agents (GnRH agonists: leuprolide, goserelin, and any other GnRH agonist in MEDICATION_LOOKUP) do NOT make an episode ABVD_PLUS | Applied to the delivered `gantt_episodes_180.csv` by `R/206_apply_decisions_gantt180.R`: Chemotherapy rows that are ABVD_PLUS in the Phase 204 file and ABVD / AVD / BV+AVD / Nivo+AVD in the 205 candidate take the 205 value |
+| REGL-06-J (205-2) | **NO**: "ABVD/AVD partial" does NOT count toward `ever_abvd` | No new abvd_class value introduced; `ever_abvd` recomputed from ABVD / AVD episodes only |
+
+Deferred to 2026-12-07: D-203-02, D-201-02/03/04, D-203-01, 205-3 (NHL-family first-line, REGL-06-K2), 205-4 (365-day restart threshold, D-205-LOT-RESTART), 205-5 (full 205 replacement, D-205-SHIP), 166 death-only patients.

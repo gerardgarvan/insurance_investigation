@@ -8407,6 +8407,62 @@ if (file.exists(recon_csv_path)) {
 }
 
 message(glue("\nSMOKE-205-01: {p205_pass} PASS / {p205_fail} FAIL / {p205_skip} SKIP"))
+# ==============================================================================
+# SECTION 15bh: DECISIONS-206 (2026-11-14 team decisions applied to Gantt 180) ----
+# ==============================================================================
+
+p206_pass <- 0L; p206_fail <- 0L; p206_skip <- 0L
+
+p206_chk <- function(label, condition) {
+  if (isTRUE(condition)) { message("  PASS: ", label); p206_pass <<- p206_pass + 1L; passed  <<- passed  + 1L }
+  else                   { message("  FAIL: ", label); p206_fail <<- p206_fail + 1L; failed  <<- failed  + 1L }
+}
+p206_skip_fn <- function(label) {
+  message("  SKIP: ", label); p206_skip <<- p206_skip + 1L; skipped <<- skipped + 1L
+}
+
+message("\nSection 15bh: DECISIONS-206 (D-201-01 = NO, 205-2 = NO)")
+
+p206_chk("DECISIONS-206 [a] R/206_apply_decisions_gantt180.R exists",
+         file.exists(here::here("R", "206_apply_decisions_gantt180.R")))
+
+p206_live <- here::here("output", "gantt_episodes_180.csv")
+p206_pre  <- here::here("output", "internal", "gantt_episodes_180_pre_decisions_20261114.csv")
+if (file.exists(p206_live) && file.exists(p206_pre)) {
+  p206_g   <- utils::read.csv(p206_live, colClasses = "character", na.strings = "", check.names = FALSE)
+  p206_old <- utils::read.csv(p206_pre,  colClasses = "character", na.strings = "", check.names = FALSE)
+
+  p206_chk("DECISIONS-206 [b] delivered file has 32 columns", ncol(p206_g) == 32L)
+  p206_chk("DECISIONS-206 [c] abvd_class value set unchanged from pre-decisions (Phase 201 set, no 205-only labels)",
+           all(unique(p206_g$abvd_class[!is.na(p206_g$abvd_class)]) %in%
+               unique(p206_old$abvd_class[!is.na(p206_old$abvd_class)])) &&
+           !any(grepl("partial", p206_g$abvd_class, ignore.case = TRUE)))
+
+  p206_support <- if (exists("SUPPORTIVE_AGENTS")) SUPPORTIVE_AGENTS else
+    c("Leuprolide", "Goserelin", "Triptorelin", "Histrelin", "Nafarelin", "Buserelin")
+  p206_comps <- c("doxorubicin", "bleomycin", "vinblastine", "dacarbazine")
+  p206_plus <- p206_g$drug_names[!is.na(p206_g$abvd_class) & p206_g$abvd_class == "ABVD_PLUS" &
+                                  !is.na(p206_g$drug_names)]
+  p206_gnrh_only <- vapply(strsplit(p206_plus, "[;,|]"), function(x) {
+    x <- tolower(trimws(x)); x <- x[nzchar(x)]
+    extra <- setdiff(x, p206_comps)
+    length(extra) > 0L && all(extra %in% tolower(p206_support))
+  }, logical(1))
+  p206_chk("DECISIONS-206 [d] no ABVD_PLUS episode whose only non-ABVD agents are GnRH agonists",
+           !any(p206_gnrh_only))
+
+  p206_const <- function(cn) all(tapply(p206_g[[cn]], p206_g$patient_id,
+                                        function(x) length(unique(x))) == 1L)
+  p206_chk("DECISIONS-206 [e] ever_abvd and ever_abvd_plus constant within patient",
+           p206_const("ever_abvd") && p206_const("ever_abvd_plus"))
+} else {
+  for (p206_l in c("[b] 32 columns", "[c] value set", "[d] GnRH-only ABVD_PLUS", "[e] flags constant within patient")) {
+    p206_skip_fn(paste0("DECISIONS-206 ", p206_l, " -- output/gantt_episodes_180.csv or pre-decisions copy absent; run R/206 on HiPerGator"))
+  }
+}
+
+message(glue("\nDECISIONS-206: {p206_pass} PASS / {p206_fail} FAIL / {p206_skip} SKIP"))
+
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----

@@ -75,7 +75,8 @@ Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_
 ### Open Decisions (v3.14)
 
 - **D-201-01..04:** see Phase 201 Findings above (all open).
-- **D-205 (run 5):** D-201-01 supportive agents out of ABVD_PLUS (proposed yes); ABVD/AVD partial out of ever_abvd (proposed yes); NHL-family first-line (383 patients) vs D-203-02; LOT restart 365 d; ship 205 gantt_episodes_180.csv over delivered? See phases/205-*/REGL-06-decisions.md, 205-TEAM-SUMMARY.md.
+- **Decided 2026-11-14 (Gerard):** D-201-01 = NO (GnRH agonists do not make ABVD_PLUS); 205-2 = NO (ABVD/AVD partial not in ever_abvd). Applied by R/206_apply_decisions_gantt180.R. All other open decisions deferred to 2026-12-07.
+- **D-205 (run 5, remaining open, deferred to 2026-12-07):** NHL-family first-line (383 patients) vs D-203-02; LOT restart 365 d; ship 205 gantt_episodes_180.csv over delivered? See phases/205-*/REGL-06-decisions.md, 205-TEAM-SUMMARY.md.
 - **D-203-01:** NOTX-05 "treatment observable" eligibility rule is documented in R/203 sheet D_candidate_rules and NOT applied as a filter. Open.
 - **D-203-02 (cohort definition, out of scope for v3.14):** Even claims-based FLM has about 1/3 untreated among observable patients (USF 79%, EMY 57%, AVH 55%, UCI 48%, AMS 45%, UFH 43%, UMI 37%, FLM 33%, UAB 31%). Many of the 2,085 unexplained no_tx patients (64.2%) may be prevalent cases or unconfirmed diagnoses rather than untreated incident HL. Consider requiring diagnostic workup (biopsy / PET near dx) or excluding history-of-HL-only patients for treatment analyses. No change to cohort membership.
 

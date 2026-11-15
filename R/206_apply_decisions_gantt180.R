@@ -1,0 +1,174 @@
+# ==============================================================================
+# R/206_apply_decisions_gantt180.R
+# Apply the 2026-11-14 team decisions to the delivered Phase 204 Gantt file.
+#
+#   (A) D-201-01 = NO : GnRH-agonist supportive agents do NOT make an episode
+#       ABVD_PLUS. Chemotherapy rows that are ABVD_PLUS in the base (Phase 204)
+#       file and carry one of {ABVD, AVD, BV+AVD, Nivo+AVD} in the Phase 205
+#       candidate take the Phase 205 abvd_class.
+#   (B) 205-2 = NO    : ABVD/AVD partial does NOT count toward ever_abvd. No new
+#       Phase 205 label is introduced; every other row/column is left as in base.
+#
+# Inputs (pinned, env-overridable; stop if missing):
+#   R206_BASE_GANTT  default output/internal/pre205_run_backup/gantt_episodes_180.csv
+#   R206_P205_GANTT  default output/internal/p205_candidate_v4/gantt_episodes_180.csv
+# Outputs:
+#   output/gantt_episodes_180.csv                          (32 cols, same order)
+#   output/internal/gantt_episodes_180_pre_decisions_20261114.csv (copy, no overwrite)
+#   output/internal/decisions_20261114_changes.csv         (internal only)
+# Interactive HiPerGator only: source("R/206_apply_decisions_gantt180.R",
+#   local = new.env(parent = globalenv()))
+# ==============================================================================
+
+suppressPackageStartupMessages(library(here))
+
+BASE_GANTT <- Sys.getenv("R206_BASE_GANTT",
+  here::here("output", "internal", "pre205_run_backup", "gantt_episodes_180.csv"))
+P205_GANTT <- Sys.getenv("R206_P205_GANTT",
+  here::here("output", "internal", "p205_candidate_v4", "gantt_episodes_180.csv"))
+LIVE_GANTT <- here::here("output", "gantt_episodes_180.csv")
+PRE_COPY   <- here::here("output", "internal", "gantt_episodes_180_pre_decisions_20261114.csv")
+CHANGES_CSV <- here::here("output", "internal", "decisions_20261114_changes.csv")
+
+EXPECTED_ROWS <- 22548L
+TAKE_P205_CLASSES <- c("ABVD", "AVD", "BV+AVD", "Nivo+AVD")
+ABVD_EPISODE_CLASSES <- c("ABVD", "AVD")
+# Same 32 columns / order as R/142 EPISODES_SCHEMA (Phase 201b).
+SCHEMA_32 <- c(
+  "patient_id", "treatment_type", "episode_number",
+  "episode_start", "episode_stop", "episode_length_days",
+  "distinct_dates_in_episode",
+  "triggering_codes", "drug_names", "triggering_code_descriptions",
+  "cancer_category", "is_hodgkin",
+  "drug_group",
+  "code_type", "source_table", "sct_cross_use_flag",
+  "episode_dx_codes", "episode_dx_categories",
+  "episode_dx_7day_confirmed", "age_at_episode",
+  "has_autoimmune_dx", "first_autoimmune_dx_date",
+  "autoimmune_dx_code_system",
+  "immune_flag", "ever_brentuximab", "immune_flag_dx",
+  "ever_abvd", "abvd_episode", "tr_hl_dx", "tr_nhl_dx",
+  "abvd_class", "ever_abvd_plus"
+)
+
+fmt_sup <- function(n) if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
+qc_fail <- function(...) stop("R/206 QC FAIL: ", ..., call. = FALSE)
+qc_ok   <- function(msg) message("  OK: ", msg)
+
+read_chr <- function(path) {
+  utils::read.csv(path, colClasses = "character", na.strings = "",
+                  check.names = FALSE, stringsAsFactors = FALSE)
+}
+ep_key <- function(d) paste(d$patient_id, d$treatment_type, d$episode_start, sep = "\r")
+
+message("R/206: apply 2026-11-14 decisions to gantt_episodes_180.csv")
+for (p in c(BASE_GANTT, P205_GANTT, LIVE_GANTT)) {
+  if (!file.exists(p)) stop("Input missing (stop): ", p, call. = FALSE)
+}
+message("  base: ", BASE_GANTT, " (pinned = ", nzchar(Sys.getenv("R206_BASE_GANTT")), ")")
+message("  p205: ", P205_GANTT, " (pinned = ", nzchar(Sys.getenv("R206_P205_GANTT")), ")")
+
+base <- read_chr(BASE_GANTT)
+p205 <- read_chr(P205_GANTT)
+message("  rows: base ", nrow(base), ", p205 ", nrow(p205))
+
+# ---- QC: inputs ---------------------------------------------------------------
+if (!identical(names(base), SCHEMA_32)) qc_fail("base columns differ from the 32-column schema")
+if (!all(SCHEMA_32 %in% names(p205)))   qc_fail("p205 file lacks required columns")
+if (nrow(base) != EXPECTED_ROWS) qc_fail(sprintf("base rows %d != %d", nrow(base), EXPECTED_ROWS))
+if (nrow(p205) != EXPECTED_ROWS) qc_fail(sprintf("p205 rows %d != %d", nrow(p205), EXPECTED_ROWS))
+kb <- ep_key(base); kp <- ep_key(p205)
+if (anyDuplicated(kb)) qc_fail("duplicate patient_id + treatment_type + episode_start in base")
+if (anyDuplicated(kp)) qc_fail("duplicate patient_id + treatment_type + episode_start in p205")
+if (!setequal(kb, kp)) qc_fail("base and p205 episode keys are not 1:1")
+qc_ok("join key unique and 1:1; row counts both match expected")
+
+# ---- Apply decisions ------------------------------------------------------------
+p205_class <- p205$abvd_class[match(kb, kp)]
+is_chemo   <- !is.na(base$treatment_type) & base$treatment_type == "Chemotherapy"
+changed    <- is_chemo & !is.na(base$abvd_class) & base$abvd_class == "ABVD_PLUS" &
+              !is.na(p205_class) & p205_class %in% TAKE_P205_CLASSES
+
+out <- base
+out$abvd_class[changed] <- p205_class[changed]
+
+abvd_ep <- is_chemo & !is.na(out$abvd_class) & out$abvd_class %in% ABVD_EPISODE_CLASSES
+out$abvd_episode <- ifelse(abvd_ep, "TRUE", "FALSE")
+ever_abvd_pt <- tapply(abvd_ep, out$patient_id, any)
+ever_plus_pt <- tapply(!is.na(out$abvd_class) & out$abvd_class == "ABVD_PLUS",
+                       out$patient_id, any)
+out$ever_abvd      <- as.character(ifelse(ever_abvd_pt[out$patient_id], "TRUE", "FALSE"))
+out$ever_abvd_plus <- as.character(ifelse(ever_plus_pt[out$patient_id], "TRUE", "FALSE"))
+
+# ---- QC: results ----------------------------------------------------------------
+message("\nQC")
+if (!identical(names(out), SCHEMA_32)) qc_fail("output schema differs from the 32-column schema")
+if (nrow(out) != EXPECTED_ROWS)        qc_fail("output row count changed")
+qc_ok(sprintf("schema identical (32 columns, same order); rows = %s", fmt_sup(nrow(out))))
+
+new_vals <- setdiff(unique(out$abvd_class[!is.na(out$abvd_class)]),
+                    unique(base$abvd_class[!is.na(base$abvd_class)]))
+if (length(new_vals)) qc_fail("new abvd_class values introduced: ", paste(new_vals, collapse = ", "))
+qc_ok("no new abvd_class values")
+
+untouched <- setdiff(SCHEMA_32, c("abvd_class", "abvd_episode", "ever_abvd", "ever_abvd_plus"))
+for (cn in untouched) {
+  if (!identical(out[[cn]], base[[cn]])) qc_fail("unexpected change in column ", cn)
+}
+qc_ok("all other 28 columns identical to base")
+if (any(out$abvd_class[!changed] != base$abvd_class[!changed], na.rm = TRUE) ||
+    !identical(is.na(out$abvd_class), is.na(base$abvd_class))) {
+  qc_fail("abvd_class changed on rows outside the decision set")
+}
+for (cn in c("ever_abvd", "ever_abvd_plus")) {
+  if (any(tapply(out[[cn]], out$patient_id, function(x) length(unique(x))) != 1L)) {
+    qc_fail(cn, " not constant within patient")
+  }
+}
+qc_ok("ever_abvd / ever_abvd_plus constant within patient")
+if (any(out$abvd_episode == "TRUE" & !is_chemo)) qc_fail("abvd_episode TRUE on a non-Chemotherapy row")
+if (!identical(out$abvd_episode[!changed], base$abvd_episode[!changed])) {
+  message("  note: abvd_episode differs from base on rows outside the decision set")
+  qc_fail("abvd_episode recompute disagrees with base outside decision set (e.g. a legacy class such as JCODE_ABVD); review before shipping")
+}
+qc_ok("abvd_episode recompute matches base outside decision set")
+
+# ---- Console summary ------------------------------------------------------------
+tab_str <- function(x) {
+  t <- table(ifelse(is.na(x), "(NA, non-chemo)", x))
+  paste0("    ", names(t), ": ", vapply(as.integer(t), fmt_sup, ""), collapse = "\n")
+}
+n_pt <- function(flag, d) fmt_sup(length(unique(d$patient_id[d[[flag]] == "TRUE"])))
+message("\nabvd_class BEFORE:\n", tab_str(base$abvd_class))
+message("abvd_class AFTER:\n",  tab_str(out$abvd_class))
+message(sprintf("ever_abvd patients:      before %s, after %s", n_pt("ever_abvd", base), n_pt("ever_abvd", out)))
+message(sprintf("ever_abvd_plus patients: before %s, after %s", n_pt("ever_abvd_plus", base), n_pt("ever_abvd_plus", out)))
+message(sprintf("changed episodes: %s; changed patients: %s",
+                fmt_sup(sum(changed)), fmt_sup(length(unique(base$patient_id[changed])))))
+
+# ---- Write ----------------------------------------------------------------------
+dir.create(dirname(PRE_COPY), recursive = TRUE, showWarnings = FALSE)
+if (file.exists(PRE_COPY)) {
+  message("  pre-decisions copy already exists, not overwritten: ", PRE_COPY)
+} else {
+  if (!file.copy(LIVE_GANTT, PRE_COPY, overwrite = FALSE)) qc_fail("could not copy live file to pre-decisions backup")
+  message("  wrote pre-decisions copy: ", PRE_COPY)
+}
+
+chg <- data.frame(
+  patient_id = base$patient_id[changed], episode_start = base$episode_start[changed],
+  old_class = base$abvd_class[changed], new_class = out$abvd_class[changed],
+  drug_names = base$drug_names[changed], stringsAsFactors = FALSE)
+utils::write.csv(chg, CHANGES_CSV, row.names = FALSE, na = "")
+message("  wrote ", CHANGES_CSV, " (internal; ", nrow(chg), " rows)")
+
+# Quote only text-typed columns (logical/numeric stay bare), as write.csv does
+# for the typed frame in R/142; NA written as blank.
+is_text <- vapply(out, function(x) is.character(utils::type.convert(x, as.is = TRUE, na.strings = "")),
+                  logical(1))
+utils::write.csv(out, LIVE_GANTT, row.names = FALSE, na = "", quote = which(is_text))
+chk <- read_chr(LIVE_GANTT)
+if (!identical(names(chk), SCHEMA_32) || nrow(chk) != EXPECTED_ROWS) qc_fail("written file failed read-back check")
+if (!identical(chk, out)) { bad <- names(out)[!vapply(names(out), function(cn) identical(chk[[cn]], out[[cn]]), NA)]; qc_fail("written file does not round-trip to the in-memory result; columns: ", paste(bad, collapse = ","), "; attrs equal: ", isTRUE(all.equal(attributes(chk), attributes(out)))) }
+message("  wrote ", LIVE_GANTT, " (", ncol(chk), " columns, ", fmt_sup(nrow(chk)), " rows); read-back OK")
+message("R/206 done")
