@@ -138,51 +138,66 @@ TABLES <- tibble(
   treatment_table = c(TRUE, TRUE, TRUE, TRUE, FALSE))
 
 table_by_site <- function(tbl_name, date_col) {
+  # Raw SQL via DBI (no dbplyr tidy evaluation). Identifiers quoted with dbQuoteIdentifier.
   open_pcornet_con()
-  tb <- tryCatch(get_pcornet_table(tbl_name), error = function(e) NULL)
-  if (is.null(tb)) {
+  con <- get("pcornet_con", envir = .GlobalEnv)
+  cols <- tryCatch(DBI::dbListFields(con, tbl_name), error = function(e) NULL)
+  if (is.null(cols)) {
     close_pcornet_con()
     return(tibble(table = tbl_name, site = character(), n_rows = integer(), n_patients = integer(),
                   min_date = character(), max_date = character(), link = "table not found"))
   }
-  cols <- colnames(tb)
-  check_tbl_cols(tb, c("ID", if (!is.na(date_col) && nzchar(date_col)) date_col), tbl_name)
+  qi <- function(x) as.character(DBI::dbQuoteIdentifier(con, x))
+  has_date <- !is.na(date_col) && nzchar(date_col)
+  if (has_date && !(date_col %in% cols)) {
+    message(glue("  [R208] {tbl_name}: date column {date_col} not in table; min/max date = NA"))
+    has_date <- FALSE
+  }
+  if (!("ID" %in% cols)) {
+    close_pcornet_con()
+    stop("[R208] ", tbl_name, " missing columns: ID. available: ", paste(cols, collapse = ", "))
+  }
+  t_q <- qi(tbl_name)
   if ("SOURCE" %in% cols) {
-    base <- tb |> mutate(.site = SOURCE); link <- "table SOURCE"
+    from_sql <- sprintf("%s AS t", t_q)
+    site_sql <- sprintf("t.%s", qi("SOURCE")); link <- "table SOURCE"
   } else if ("ENCOUNTERID" %in% cols) {
-    e <- get_pcornet_table("ENCOUNTER") |> select(ENCOUNTERID, .site = SOURCE) |> distinct()
-    base <- tb |> left_join(e, by = "ENCOUNTERID"); link <- "ENCOUNTERID -> ENCOUNTER.SOURCE"
+    from_sql <- sprintf(
+      "%s AS t LEFT JOIN (SELECT DISTINCT %s AS ENCOUNTERID, %s AS site_src FROM %s) AS e ON t.%s = e.ENCOUNTERID",
+      t_q, qi("ENCOUNTERID"), qi("SOURCE"), qi("ENCOUNTER"), qi("ENCOUNTERID"))
+    site_sql <- "e.site_src"; link <- "ENCOUNTERID -> ENCOUNTER.SOURCE"
   } else {
     close_pcornet_con()
     return(tibble(table = tbl_name, site = character(), n_rows = integer(), n_patients = integer(),
                   min_date = character(), max_date = character(),
                   link = "no SOURCE or ENCOUNTERID: not attributable"))
   }
-  has_date <- !is.na(date_col) && nzchar(date_col)
   if (has_date) {
-    # rename() + all_of() avoids !! / .data inside the lazy (dbplyr) mutate
-    res <- base |>
-      rename(.d_raw = all_of(date_col)) |>
-      mutate(.d = as.character(.d_raw)) |>
-      mutate(.d_ok = if_else(!is.na(.d) & .d >= SENTINEL_ISO, .d, NA_character_)) |>
-      group_by(.site) |>
-      summarise(n_rows = n(), n_patients = n_distinct(ID),
-                min_date = min(.d_ok, na.rm = TRUE), max_date = max(.d_ok, na.rm = TRUE)) |>
-      collect()
+    d_sql <- sprintf("CAST(t.%s AS VARCHAR)", qi(date_col))
+    ok_sql <- sprintf("CASE WHEN %s >= '%s' THEN %s END", d_sql, SENTINEL_ISO, d_sql)
+    date_sel <- sprintf("MIN(%s) AS min_date, MAX(%s) AS max_date", ok_sql, ok_sql)
   } else {
-    res <- base |>
-      group_by(.site) |>
-      summarise(n_rows = n(), n_patients = n_distinct(ID)) |>
-      collect() |>
-      mutate(min_date = NA_character_, max_date = NA_character_)
+    date_sel <- "CAST(NULL AS VARCHAR) AS min_date, CAST(NULL AS VARCHAR) AS max_date"
   }
+  sql <- sprintf(
+    "SELECT %s AS site, COUNT(*) AS n_rows, COUNT(DISTINCT t.%s) AS n_patients, %s FROM %s GROUP BY 1",
+    site_sql, qi("ID"), date_sel, from_sql)
+  res <- tryCatch(DBI::dbGetQuery(con, sql), error = function(e) {
+    close_pcornet_con()
+    stop("[R208] table_by_site SQL failed for ", tbl_name, ": ", conditionMessage(e))
+  })
   close_pcornet_con()
-  res |>
-    transmute(table = tbl_name, site = coalesce(as.character(.site), "(blank)"),
+  tibble::as_tibble(res) |>
+    transmute(table = tbl_name, site = coalesce(as.character(site), "(blank)"),
               n_rows = as.integer(n_rows), n_patients = as.integer(n_patients),
               min_date = substr(as.character(min_date), 1, 10),
               max_date = substr(as.character(max_date), 1, 10), link = link)
 }
+# Smoke test: first TABLES row
+message("  [smoke] table_by_site on first TABLES row: ", TABLES$table[1])
+.smoke <- table_by_site(TABLES$table[1], TABLES$date_col[1])
+print(as.data.frame(mutate(.smoke, n_rows = fmt_sup(n_rows), n_patients = fmt_sup(n_patients))), row.names = FALSE)
+rm(.smoke)
 presence <- bind_rows(lapply(seq_len(nrow(TABLES)), function(i) {
   r <- table_by_site(TABLES$table[i], TABLES$date_col[i])
   message(glue("  {TABLES$table[i]}: {nrow(r)} site rows ({unique(r$link)[1]})"))
