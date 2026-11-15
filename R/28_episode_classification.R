@@ -402,6 +402,23 @@ episodes <- episodes %>%
 
 n_labeled <- sum(!is.na(episodes$regimen_label))
 message(glue("  Phase 205 regimen_label: {n_labeled} episodes labeled (of {nrow(episodes)} total)"))
+# Diagnostic (round 4): most common drug sets still "Unrecognized systemic"
+# (drug sets only, no IDs; counts 1-10 shown as <11). Shows exactly what the
+# dictionary misses without opening the RDS.
+{
+  un <- episodes %>%
+    dplyr::filter(regimen_label %in% REGIMEN_UNRECOGNIZED_LABEL)
+  if (nrow(un) > 0L) {
+    un_sets <- vapply(un$drug_names, function(s) paste(sort(split_drug_names(s)), collapse = " + "),
+                      character(1L), USE.NAMES = FALSE)
+    top_un <- sort(table(un_sets), decreasing = TRUE)
+    top_un <- utils::head(top_un, 15L)
+    message("  Top 'Unrecognized systemic' drug sets (episodes; 1-10 shown as <11):")
+    for (k in seq_along(top_un)) {
+      message("    ", ifelse(top_un[k] < 11L, "<11", as.character(top_un[k])), "  ", names(top_un)[k])
+    }
+  }
+}
 n_bad_label <- sum(!is.na(episodes$regimen_label) &
                    !episodes$treatment_type %in% REGIMEN_SYSTEMIC_TYPES)
 if (n_bad_label > 0L) {

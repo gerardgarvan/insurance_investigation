@@ -231,6 +231,57 @@ recon_xtab <- xtab %>%
 message("[R/205] abvd_class 204 x 205 (chemotherapy episodes; counts 1-10 shown as <11):")
 print(as.data.frame(recon_xtab[, -1]), row.names = FALSE)
 
+# (a2) Drug-set breakdown of every 204 -> 205 class change with n >= 11
+# (episode drug sets only, no IDs; sets sorted so order/separator do not matter;
+# counts 1-10 shown as <11). Also the BV+AVD / Nivo+AVD residual vs 204 (target 0,
+# or a documented reason: Phase 201 anchored on Immunotherapy BV/nivolumab dates
+# within +/-ABVD_CONCURRENT_WINDOW_DAYS of the chemo date span; 205 uses any systemic row).
+drugset_key <- function(x) {
+  vapply(x, function(s) {
+    tk <- sort(unique(trimws(unlist(strsplit(ifelse(is.na(s), "", s), "[,;]")))))
+    tk <- tk[nzchar(tk)]
+    if (length(tk) == 0L) "(none)" else paste(tk, collapse = " + ")
+  }, character(1L), USE.NAMES = FALSE)
+}
+recon_ds <- NULL
+if ("drug_names" %in% names(g205)) {
+  chg <- chemo %>%
+    dplyr::left_join(g205 %>% dplyr::select(dplyr::all_of(keys), drug_names), by = keys) %>%
+    dplyr::mutate(class_204 = blank_to(class_204), class_205 = blank_to(class_205)) %>%
+    dplyr::filter(class_204 != class_205) %>%
+    dplyr::mutate(drug_set = drugset_key(drug_names))
+  pairs_n <- chg %>% dplyr::count(class_204, class_205, name = "n_pair") %>%
+    dplyr::filter(n_pair >= 11L)
+  message("[R/205] 204 -> 205 class changes with n >= 11: ", nrow(pairs_n),
+          " pair(s); drug-set breakdown (top 12 sets per pair; counts 1-10 shown as <11):")
+  recon_ds <- chg %>%
+    dplyr::inner_join(pairs_n, by = c("class_204", "class_205")) %>%
+    dplyr::count(class_204, class_205, n_pair, drug_set, name = "n") %>%
+    dplyr::arrange(class_204, class_205, dplyr::desc(n)) %>%
+    dplyr::group_by(class_204, class_205) %>%
+    dplyr::slice_head(n = 12L) %>%
+    dplyr::ungroup()
+  for (i in seq_len(nrow(pairs_n))) {
+    message("  ", pairs_n$class_204[i], " -> ", pairs_n$class_205[i],
+            " (n = ", fmt_n(pairs_n$n_pair[i]), ")")
+    sub_i <- recon_ds %>%
+      dplyr::filter(class_204 == pairs_n$class_204[i], class_205 == pairs_n$class_205[i])
+    print(as.data.frame(dplyr::transmute(sub_i, drug_set, n = fmt_n(n))), row.names = FALSE)
+  }
+  recon_ds <- recon_ds %>%
+    dplyr::transmute(section = "drugset_204_to_205", class_204,
+                     class_205 = paste0(class_205, " | ", drug_set), n_display = fmt_n(n))
+} else {
+  message("[R/205] drug_names not in Gantt 205; drug-set breakdown skipped")
+}
+for (cls in c("BV+AVD", "Nivo+AVD")) {
+  n204 <- sum(chemo$class_204 %in% cls)
+  n205 <- sum(chemo$class_205 %in% cls)
+  n_diff <- sum((chemo$class_204 %in% cls) != (chemo$class_205 %in% cls))
+  message("[R/205] ", cls, " residual vs 204: 204 = ", fmt_n(n204), "; 205 = ", fmt_n(n205),
+          "; episodes that differ = ", fmt_n(n_diff), " (target 0)")
+}
+
 # (b) patient-level ever_abvd and first-chemo-ABVD, before / after.
 abvd_cls <- c("ABVD", "AVD", "JCODE_ABVD")
 pt <- ep_cmp %>%
@@ -291,6 +342,7 @@ recon_cls <- chk %>%
 recon <- dplyr::bind_rows(
   recon_xtab,
   recon_pt %>% dplyr::select(section, class_204, class_205, n_display),
+  recon_ds,
   recon_cls)
 readr::write_csv(recon, R205_RECON_CSV)
 message("[R/205] reconciliation written: ", nrow(recon), " rows - ", R205_RECON_CSV)

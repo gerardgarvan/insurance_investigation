@@ -113,3 +113,34 @@ Open decisions:
 - BEAM window (30 days), CHOP-family grouping for LOT, and Pediatric first-line eligibility are assumptions.
 
 PENDING HIPERGATOR: re-run, then paste the output lines named in the SUMMARY.
+
+## Fix round 4 (2026-11-14, quick 261114 round 4)
+
+Changes (R/00_config.R, R/utils/utils_regimen.R, R/205_lot_output.R, R/28_episode_classification.R, tests/testthat/test-205-regimen-round4.R):
+- CHOP / R-CHOP / CHOEP / BEACOPP: already in REGIMEN_DICT at a04c74b and resolve in unit tests for the exact drug sets (any order, comma or semicolon). Drug tokens are now also normalized (trailing "(IV)", salt words). If HiPerGator still shows them as "Unrecognized systemic", R/28 now prints the top 15 unrecognized drug sets so the cause is visible.
+- New dictionary entries: BV mono, BV+Nivo, BV+PD-1, PD-1 mono (detail = agent; both agents = "(switch)"), Other checkpoint (non-HL), Non-HL agent. BV_consolidation still wins when an SCT episode precedes BV mono. "Other checkpoint (non-HL)" and "Non-HL agent" are in REGIMEN_NON_HL_LABELS: no LOT, never first-line. BV mono, PD-1 mono, BV+Nivo, BV+PD-1 count in LOT as salvage lines and are not first-line.
+- ABVD family is now episode-anchored (`adjust_abvd_family()`, `classify_abvd_set()`): for a Chemotherapy episode whose drugs include doxorubicin, vinblastine and dacarbazine, the drug set is pooled with every systemic row (any treatment_type) within +/-CONCURRENCY_WINDOW_DAYS of the episode's administration-date span (first - 7 to last + 7).
+  - No extras: ABVD (bleomycin) / AVD. AVD + BV: BV+AVD (BV wins over nivolumab). AVD + nivolumab: Nivo+AVD. ABVD + BV or nivolumab: ABVD_PLUS (Phase 201 rule).
+  - Any other agent: ABVD_PLUS; regimen_detail lists the added agents.
+  - Supportive agents (SUPPORTIVE_AGENTS: leuprolide, goserelin, triptorelin, histrelin, nafarelin, buserelin) are ignored.
+- R/205 reconciliation prints a drug-set breakdown for every 204 -> 205 class change with n >= 11, writes it to the reconciliation CSV (section drugset_204_to_205), and reports the BV+AVD / Nivo+AVD residual vs 204. The >5% warnings are kept.
+- Deviation: the existing test "Strict episode-level match beats a polluted date-level pool" expected ABVD with a prednisone row 2 days away; under rule (c) that is ABVD_PLUS, so the test now asserts that and adds a far-away (stays ABVD) case.
+- Known difference from the Phase 201 code: R/142 used Immunotherapy BV/nivolumab rows only; 205 pools any systemic row, per the round-4 request. Rule (c) also counts any non-supportive agent (not only BV / nivolumab) as "plus". The residual vs 204 is reported in R/205; expected non-zero where 204 ignored other agents.
+
+PENDING HIPERGATOR: re-run R/28, R/142 (p143 options), R/205; paste the R/28 "Top 'Unrecognized systemic' drug sets" lines, the R/205 `204 -> 205 class changes` block, and the two `residual vs 204` lines.
+
+```r
+module load R/4.5
+R --no-save
+source("R/28_episode_classification.R", local = new.env(parent = globalenv()))
+source("R/142_gantt_180_export.R", local = new.env(parent = globalenv()))
+source("R/205_lot_output.R", local = new.env(parent = globalenv()))
+```
+
+### Open policy decisions (team)
+
+| ID | Question | Proposed | Status |
+|----|----------|----------|--------|
+| D-201-01 | Does ABVD_PLUS exclude supportive agents (leuprolide, goserelin, GnRH agonists)? | Yes (implemented via SUPPORTIVE_AGENTS) | OPEN, confirm |
+| REGL-06-J | Does "ABVD/AVD partial" count toward `ever_abvd`? | No (unchanged) | OPEN |
+| REGL-06-K | Bendamustine mono / BR in HL first-line: likely NHL or elderly patients | Exclude from HL first-line and report separately. NOT yet implemented: both remain in REGIMEN_FIRST_LINE_LABELS until decided | OPEN |

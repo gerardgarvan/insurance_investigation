@@ -4665,8 +4665,42 @@ REGIMEN_DICT <- list(
     maintenance      = TRUE,
     requires_prior_sct = TRUE,
     note             = "BV mono only when an SCT episode precedes it within BV_CONSOLIDATION_SCT_WINDOW_DAYS (REGL-06-C)"
+  ),
+  # --- Immunotherapy agents given alone / combined (quick 261114 round 4) ---
+  # BV_consolidation (above) wins when an SCT episode precedes; otherwise BV mono
+  # is a salvage line. Evaluated after the *+AVD entries, so those still win.
+  `BV mono` = list(
+    drugs = "Brentuximab Vedotin", exclusive = TRUE, maintenance = FALSE
+  ),
+  `BV+Nivo` = list(
+    drugs = c("Brentuximab Vedotin", "Nivolumab"), exclusive = TRUE, maintenance = FALSE
+  ),
+  `BV+PD-1` = list(
+    drugs = c("Brentuximab Vedotin", "Pembrolizumab"), exclusive = TRUE, maintenance = FALSE
+  ),
+  # PD-1 mono: nivolumab and/or pembrolizumab alone. detail = agent(s);
+  # both agents = switch.
+  `PD-1 mono` = list(
+    drugs = character(0), any_of = c("Nivolumab", "Pembrolizumab"),
+    exclusive = TRUE, maintenance = FALSE, detail_agents = TRUE
+  ),
+  # Checkpoint inhibitors not used in HL (incl. ipilimumab / atezolizumab + nivolumab).
+  `Other checkpoint (non-HL)` = list(
+    drugs = character(0),
+    any_of = c("Durvalumab", "Atezolizumab", "Ipilimumab", "Cemiplimab"),
+    optional = c("Nivolumab", "Pembrolizumab"),
+    exclusive = TRUE, maintenance = FALSE, detail_agents = TRUE
+  ),
+  `Non-HL agent` = list(
+    drugs = character(0), any_of = c("Pentostatin", "Mogamulizumab"),
+    exclusive = TRUE, maintenance = FALSE, detail_agents = TRUE
   )
 )
+
+# Supportive agents never make an ABVD episode "ABVD_PLUS" (D-201-01, proposed: yes).
+# GnRH agonists used for fertility preservation. Exact canonical names.
+SUPPORTIVE_AGENTS <- c("Leuprolide", "Goserelin", "Triptorelin", "Histrelin",
+                       "Nafarelin", "Buserelin")
 
 # BEAM conditioning counts as "near SCT" when the episode starts within this many
 # days before sct_start or after sct_stop.

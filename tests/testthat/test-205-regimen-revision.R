@@ -139,15 +139,23 @@ test_that("Episode fallback pools across episodes (BV immuno + AVD chemo)", {
   expect_true(all(r$regimen_label == "BV+AVD"))
 })
 
-test_that("Strict episode-level match beats a polluted date-level pool; date basis when no episode_df", {
+# Round 4 (quick 261114): an agent in another row within +/-7 days of the episode's
+# chemo dates makes an exact-ABVD episode ABVD_PLUS (Phase 201 date-level rule), so
+# the neighbouring prednisone row now yields ABVD_PLUS; a far-away one stays ABVD.
+test_that("Neighbouring agent within window -> ABVD_PLUS; outside window stays ABVD; date basis when no episode_df", {
   dates <- dplyr::bind_rows(
     date_rows(c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")),
     date_rows("Prednisone", ep = 2L, start = "2022-01-03"))
   eps <- ep_row("P001", "Chemotherapy", 1, "2022-01-01", "Bleomycin;Dacarbazine;Doxorubicin;Vinblastine")
   r1 <- assign_regimen(dates, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS, episode_df = eps)
   r1 <- r1[r1$episode_number == 1L, ]
-  expect_equal(r1$regimen_label, "ABVD")
+  expect_equal(r1$regimen_label, "ABVD_PLUS")
   expect_equal(r1$regimen_basis, "episode")
+  far <- dplyr::bind_rows(
+    date_rows(c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")),
+    date_rows("Prednisone", ep = 2L, start = "2022-03-01"))
+  rf <- assign_regimen(far, REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS, episode_df = eps)
+  expect_equal(rf$regimen_label[rf$episode_number == 1L], "ABVD")
   r0 <- assign_regimen(date_rows(c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazine")),
                        REGIMEN_DICT, CONCURRENCY_WINDOW_DAYS)
   expect_equal(r0$regimen_basis, "date")

@@ -35,7 +35,18 @@
 split_drug_names <- function(x) {
   if (length(x) == 0L || is.na(x[1L])) return(character(0))
   tok <- trimws(unlist(strsplit(as.character(x[1L]), "[,;]")))
-  unique(tok[nzchar(tok)])
+  unique(normalize_regimen_drug(tok[nzchar(tok)]))
+}
+
+# Strip a trailing parenthetical ("Pembrolizumab (IV)") and salt words so stray
+# variants still match dictionary names. Canonical names pass through unchanged.
+normalize_regimen_drug <- function(x) {
+  x <- as.character(x)
+  y <- trimws(sub("\\s*\\([^)]*\\)\\s*$", "", x))
+  y <- trimws(sub("\\s+(sulfate|hydrochloride|hcl|phosphate|citrate|acetate)$", "", y,
+                  ignore.case = TRUE))
+  y[!nzchar(y)] <- x[!nzchar(y)]
+  y
 }
 
 
@@ -78,7 +89,10 @@ REGIMEN_SUPPORTIVE_LABEL   <- "Non-lymphoma / supportive"
 REGIMEN_CONDITIONING_LABEL <- "Conditioning (BEAM)"
 
 # Labels that are not a lymphoma regimen: no LOT, never first-line.
-REGIMEN_NOT_RECOGNIZED_LABELS <- c(REGIMEN_UNRECOGNIZED_LABEL, REGIMEN_SUPPORTIVE_LABEL)
+# Checkpoint / agents not used in HL: excluded from LOT and first-line.
+REGIMEN_NON_HL_LABELS <- c("Other checkpoint (non-HL)", "Non-HL agent")
+REGIMEN_NOT_RECOGNIZED_LABELS <- c(REGIMEN_UNRECOGNIZED_LABEL, REGIMEN_SUPPORTIVE_LABEL,
+                                   REGIMEN_NON_HL_LABELS)
 
 # LOT regimen family per label. Same family = same line unless a gap >=
 # LOT_GAP_DAYS separates the episodes. Labels not listed are their own family.
@@ -142,8 +156,17 @@ label_one_regimen_episode <- function(pooled_drugs, own_drugs, ep_type,
       allowed <- tolower(c(fam$drugs, fam$optional, fam$any_of))
       if (!(length(own_drugs) > 0L && all(tolower(own_drugs) %in% allowed))) next
     }
+    detail <- if (is.null(fam$detail)) NA_character_ else fam$detail
+    if (isTRUE(fam$detail_agents)) {
+      ag <- c(fam$drugs, fam$any_of)
+      ag <- ag[tolower(ag) %in% tolower(pooled_drugs)]
+      if (length(ag) > 0L) {
+        detail <- paste(ag, collapse = " + ")
+        if (length(ag) > 1L && identical(nm, "PD-1 mono")) detail <- paste(detail, "(switch)")
+      }
+    }
     return(list(label  = if (is.null(fam$label)) nm else fam$label,
-                detail = if (is.null(fam$detail)) NA_character_ else fam$detail,
+                detail = detail,
                 loose  = isTRUE(fam$loose)))
   }
   if (length(pooled_drugs) > 0L) {
@@ -190,7 +213,8 @@ label_one_regimen_episode <- function(pooled_drugs, own_drugs, ep_type,
                           pool_own_only = FALSE) {
   rows <- rows %>%
     dplyr::filter(.data$treatment_type %in% REGIMEN_SYSTEMIC_TYPES,
-                  !is.na(.data$canonical_drug), nzchar(.data$canonical_drug))
+                  !is.na(.data$canonical_drug), nzchar(.data$canonical_drug)) %>%
+    dplyr::mutate(canonical_drug = normalize_regimen_drug(.data$canonical_drug))
   empty <- tibble::tibble(ID = character(), treatment_type = character(),
                           episode_number = integer(), label = character(),
                           detail = character(), loose = logical())
@@ -311,6 +335,7 @@ assign_regimen <- function(date_level_df,
                             sct_window_days, beam_window_days, immune_ids)
   ep_res  <- NULL
   own_res <- NULL
+  ep_rows_all <- NULL
   if (!is.null(episode_df)) {
     ep_sys <- episode_df %>%
       dplyr::filter(.data$treatment_type %in% REGIMEN_SYSTEMIC_TYPES,
@@ -322,6 +347,7 @@ assign_regimen <- function(date_level_df,
         dplyr::mutate(treatment_date = .data$start_date) %>%
         dplyr::select("ID", "treatment_date", "treatment_type", "canonical_drug",
                       "episode_number", "start_date")
+      ep_rows_all <- ep_rows
       ep_res  <- .regimen_pass(ep_rows, regimen_dict, window_days, sct_df,
                                sct_window_days, beam_window_days, immune_ids)
       own_res <- .regimen_pass(ep_rows, regimen_dict, window_days, sct_df,
@@ -358,7 +384,7 @@ assign_regimen <- function(date_level_df,
     dplyr::slice(1L) %>%
     dplyr::ungroup()
 
-  cands %>%
+  out <- cands %>%
     dplyr::transmute(
       ID = .data$ID, treatment_type = .data$treatment_type,
       episode_number = .data$episode_number,
@@ -366,6 +392,149 @@ assign_regimen <- function(date_level_df,
       regimen_detail = .data$detail,
       regimen_basis  = .data$basis
     )
+  adjust_abvd_family(out, date_level_df, ep_rows_all, window_days)
+}
+
+
+# ------------------------------------------------------------------------------
+# classify_abvd_set()
+# Pure rule for a Chemotherapy episode whose own drugs include Doxorubicin,
+# Vinblastine and Dacarbazine. `eff` = the episode drug set plus agents given in
+# any other row within the concurrency window of the episode dates. Supportive
+# agents (SUPPORTIVE_AGENTS: leuprolide, goserelin, other GnRH agonists) are
+# removed first, so they never make "plus" (D-201-01, proposed).
+#   no extras                          -> ABVD (bleomycin present) / AVD
+#   extras only BV and/or nivolumab    -> AVD: BV+AVD (BV wins) / Nivo+AVD
+#                                         ABVD: ABVD_PLUS (Phase 201 rule)
+#   any other agent                    -> ABVD_PLUS, detail = the added agents
+# Returns list(label, detail).
+# ------------------------------------------------------------------------------
+classify_abvd_set <- function(eff, supportive = if (exists("SUPPORTIVE_AGENTS")) SUPPORTIVE_AGENTS else
+                                  c("Leuprolide", "Goserelin", "Triptorelin", "Histrelin", "Nafarelin", "Buserelin")) {
+  eff <- unique(eff[!(tolower(eff) %in% tolower(supportive))])
+  el  <- tolower(eff)
+  comps <- c("doxorubicin", "bleomycin", "vinblastine", "dacarbazine")
+  bv    <- "brentuximab vedotin" %in% el
+  nivo  <- "nivolumab" %in% el
+  bleo  <- "bleomycin" %in% el
+  other <- setdiff(el, c(comps, "brentuximab vedotin", "nivolumab"))
+  if (length(other) == 0L) {
+    if (!bv && !nivo) {
+      return(list(label = if (bleo) "ABVD" else "AVD", detail = NA_character_))
+    }
+    if (bleo) {
+      return(list(label = "ABVD_PLUS",
+                  detail = paste(eff[el %in% c("brentuximab vedotin", "nivolumab")],
+                                 collapse = "; ")))
+    }
+    return(list(label = if (bv) "BV+AVD" else "Nivo+AVD", detail = NA_character_))
+  }
+  list(label = "ABVD_PLUS", detail = paste(eff[!(el %in% comps)], collapse = "; "))
+}
+
+
+# ------------------------------------------------------------------------------
+# adjust_abvd_family()
+# Episode-anchored ABVD-family rule (Phase 201 / R/142 relabel, quick 261114 r4).
+# For each Chemotherapy episode whose own drugs include Doxorubicin, Vinblastine
+# and Dacarbazine, pool the drugs of ANY systemic row (any treatment_type) of the
+# same patient dated within window_days of the episode's own administration-date
+# span [first - w, last + w] (episode start only when it has no date rows), then
+# apply classify_abvd_set(). Overrides the label of those episodes only.
+#
+# Args: res (assign_regimen output), date_level_df, ep_rows (NULL or episode-level
+#   long rows with ID, treatment_type, episode_number, canonical_drug, start_date),
+#   window_days.
+# ------------------------------------------------------------------------------
+adjust_abvd_family <- function(res, date_level_df, ep_rows, window_days) {
+  core <- c("doxorubicin", "vinblastine", "dacarbazine")
+  dl <- date_level_df %>%
+    dplyr::filter(.data$treatment_type %in% REGIMEN_SYSTEMIC_TYPES,
+                  !is.na(.data$canonical_drug), nzchar(.data$canonical_drug)) %>%
+    dplyr::mutate(canonical_drug = normalize_regimen_drug(.data$canonical_drug))
+  keycols <- c("ID", "treatment_type", "episode_number")
+  w <- as.integer(window_days)
+  # Date-level own drugs count only within the window of the episode start
+  # (as in the labeling passes); episode-level drug_names are the whole episode.
+  own_src <- dl %>%
+    dplyr::filter(is.na(.data$treatment_date) |
+                  abs(as.integer(.data$treatment_date - .data$start_date)) <= w) %>%
+    dplyr::select(dplyr::all_of(c(keycols, "canonical_drug")))
+  if (!is.null(ep_rows)) {
+    own_src <- dplyr::bind_rows(
+      own_src,
+      ep_rows %>% dplyr::select(dplyr::all_of(c(keycols, "canonical_drug"))))
+  }
+  own <- own_src %>%
+    dplyr::filter(.data$treatment_type == "Chemotherapy") %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number) %>%
+    dplyr::summarise(own_set = list(unique(.data$canonical_drug)), .groups = "drop")
+  own <- own[vapply(own$own_set, function(d) all(core %in% tolower(d)), logical(1L)), ]
+  if (nrow(own) == 0L) return(res)
+
+  # Span of the episode's own administration dates; episode start if it has none.
+  span_rows <- dplyr::bind_rows(
+    dl %>%
+      dplyr::filter(.data$treatment_type == "Chemotherapy", !is.na(.data$treatment_date)) %>%
+      dplyr::select(dplyr::all_of(keycols), d = "treatment_date"),
+    own %>%
+      dplyr::anti_join(
+        dl %>% dplyr::filter(!is.na(.data$treatment_date)) %>%
+          dplyr::distinct(.data$ID, .data$treatment_type, .data$episode_number),
+        by = keycols) %>%
+      dplyr::select(dplyr::all_of(keycols)) %>%
+      dplyr::inner_join(
+        dplyr::bind_rows(
+          dl %>% dplyr::select(dplyr::all_of(keycols), d = "start_date"),
+          if (!is.null(ep_rows)) {
+            ep_rows %>% dplyr::select(dplyr::all_of(keycols), d = "start_date")
+          }) %>% dplyr::distinct(),
+        by = keycols))
+  span <- span_rows %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number) %>%
+    dplyr::summarise(first = min(.data$d), last = max(.data$d), .groups = "drop")
+  own <- dplyr::inner_join(own, span, by = keycols)
+  if (nrow(own) == 0L) return(res)
+
+  # Pool: every systemic date-level row, plus episode-level rows (dated at the
+  # episode start) for episodes that have no date-level rows.
+  pool <- dl %>% dplyr::select(dplyr::all_of(keycols), pool_date = "treatment_date",
+                               pool_drug = "canonical_drug")
+  if (!is.null(ep_rows)) {
+    ep_only <- ep_rows %>%
+      dplyr::anti_join(dl %>% dplyr::distinct(.data$ID, .data$treatment_type,
+                                              .data$episode_number), by = keycols) %>%
+      dplyr::select(dplyr::all_of(keycols), pool_date = "treatment_date",
+                    pool_drug = "canonical_drug")
+    pool <- dplyr::bind_rows(pool, ep_only)
+  }
+  near <- own %>%
+    dplyr::select(dplyr::all_of(keycols), "first", "last") %>%
+    dplyr::inner_join(
+      pool %>% dplyr::select("ID", "pool_date", "pool_drug"),
+      by = "ID", relationship = "many-to-many") %>%
+    dplyr::filter(!is.na(.data$pool_date),
+                  .data$pool_date >= .data$first - w,
+                  .data$pool_date <= .data$last + w) %>%
+    dplyr::group_by(.data$ID, .data$treatment_type, .data$episode_number) %>%
+    dplyr::summarise(near_set = list(unique(.data$pool_drug)), .groups = "drop")
+  own <- dplyr::left_join(own, near, by = keycols)
+  cls <- lapply(seq_len(nrow(own)), function(i) {
+    ns <- own$near_set[[i]]
+    classify_abvd_set(c(own$own_set[[i]], if (!is.null(ns)) ns))
+  })
+  own$adj_label  <- vapply(cls, function(r) r$label,  character(1L))
+  own$adj_detail <- vapply(cls, function(r) r$detail, character(1L))
+
+  res <- dplyr::left_join(
+    res, own %>% dplyr::select(dplyr::all_of(keycols), "adj_label", "adj_detail"),
+    by = keycols)
+  hit <- !is.na(res$adj_label)
+  res$regimen_label[hit]  <- res$adj_label[hit]
+  res$regimen_detail[hit] <- res$adj_detail[hit]
+  res$adj_label  <- NULL
+  res$adj_detail <- NULL
+  res
 }
 
 
