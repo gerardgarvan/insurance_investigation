@@ -8394,12 +8394,15 @@ p205_chk("SMOKE-205-01 [g] REGL-06-decisions.md exists",
 recon_csv_path <- here::here("output", "internal", "regimen_reconciliation_p205.csv")
 if (file.exists(recon_csv_path)) {
   recon <- vroom::vroom(recon_csv_path, col_types = vroom::cols(.default = "c"), show_col_types = FALSE)
-  p205_chk("SMOKE-205-01 [h] reconciliation has regimen_label column",
-           "regimen_label" %in% names(recon))
-  p205_chk("SMOKE-205-01 [h2] reconciliation has abvd_class column",
-           "abvd_class" %in% names(recon))
-  p205_chk("SMOKE-205-01 [h3] reconciliation has match column",
-           "match" %in% names(recon))
+  # Schema written by R/205 (recon): section, class_204, class_205, n_display
+  p205_chk("SMOKE-205-01 [h] reconciliation has class_204 and class_205 columns and >= 1 row",
+           all(c("class_204", "class_205") %in% names(recon)) && nrow(recon) >= 1L)
+  p205_chk("SMOKE-205-01 [h2] reconciliation has section and n_display columns",
+           all(c("section", "n_display") %in% names(recon)))
+  # n_display is fmt_n() output (or a signed pct string in class_totals): no raw counts 1-10
+  p205_chk("SMOKE-205-01 [h3] reconciliation n_display has no unsuppressed counts 1-10",
+           "n_display" %in% names(recon) &&
+             !any(recon$n_display %in% as.character(1:10), na.rm = TRUE))
 } else {
   p205_skip_fn("SMOKE-205-01 [h] regimen_reconciliation_p205.csv absent — run Plan 03 on HiPerGator")
   p205_skip_fn("SMOKE-205-01 [h2] skipped")
