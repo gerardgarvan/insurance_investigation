@@ -24,9 +24,9 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## Current Position
 
-Phase: 205 (regimen-line-of-therapy-engine) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 205 (regimen-line-of-therapy-engine) — code written; NOT run on HiPerGator; pending scope review after 202-204 results
+Plan: 3 of 3 (205-03 not executed)
+Status: Phases 202, 203, 204 COMPLETE 2026-11-14 (204 caveat: plan 204-03 R/88 section not executed)
 Last activity: 2026-11-14
 
 ## Prior Position (v3.13 final)
@@ -71,6 +71,19 @@ Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_
 - **TR flags:** `tr_present` 863; `tr_hl_dx` TRUE 600 / FALSE 263 / NA 7,557; `tr_nhl_dx` TRUE 154 / FALSE 709 / NA 7,557; both TRUE 11.
 - **D-201-04:** 121 TR-HL patients absent from gantt_episodes_180, all r1 (not in confirmed_hl_cohort.rds). Follow-up phase needed.
 - **D-201-03 unlisted lymphoid codes:** 9657, 9675, 9715, 9732, 9735, 9761, 9811, 9812, 9823 (n=13), 9831, 9834, 9836, 9837, 9861, 9867, 9920, 9950, 9962, 9980, 9986, 9989 (others \<11).
+
+### Open Decisions (v3.14)
+
+- **D-201-01..04:** see Phase 201 Findings above (all open).
+- **D-203-01:** NOTX-05 "treatment observable" eligibility rule is documented in R/203 sheet D_candidate_rules and NOT applied as a filter. Open.
+- **D-203-02 (cohort definition, out of scope for v3.14):** Even claims-based FLM has about 1/3 untreated among observable patients (USF 79%, EMY 57%, AVH 55%, UCI 48%, AMS 45%, UFH 43%, UMI 37%, FLM 33%, UAB 31%). Many of the 2,085 unexplained no_tx patients (64.2%) may be prevalent cases or unconfirmed diagnoses rather than untreated incident HL. Consider requiring diagnostic workup (biopsy / PET near dx) or excluding history-of-HL-only patients for treatment analyses. No change to cohort membership.
+
+### Phase 202-204 Findings (HiPerGator, 2026-11-14)
+
+- **202:** denominator 600; chemo sensitivity 46.5% overall, 80.3% (236/294) within EHR coverage window; radiation capture gap (84 of 115 in window with no pipeline record); PPV chemo 92.6%, radiation 36.7%, immunotherapy 6.8% (definitional). R/88 TR-VAL-202 12/12.
+- **203:** no_tx 3,246 / treated 4,450; unexplained 2,085 (64.2%); TR-treated AND observable 41. R/88 SMOKE-203-01 8/8.
+- **204:** Gantt 180 rows 22,520 -> 22,548 (Chemotherapy only); ABVD / immune / BV flag counts unchanged. Drug-name attribution on episodes (54.6% carry `drug_names`) is the remaining gap; input to Phase 205 scope (REGL-06-decisions.md).
+- **Retired checks:** R/142 PRE201 regression block removed; R/26 MCAP-03 block moved to R/204_gantt_before_after.R (HiPerGator run PENDING).
 
 ### Phase 200 Team Decision (D-200-01)
 
@@ -181,6 +194,7 @@ source("R/<NNN>_<script>.R", local = new.env(parent = globalenv()))
 | 261111-eqg | Fix payer_path / n_payer_matched orphaned after load_payer_summary refactor: attach source_path/source_mtime/n_cohort_matched attrs to return value; fix R/165 KEY rows; R/183 confirmed clean | 2026-11-11 | 61c355a | [261111-eqg-fix-payer-path-leftovers-after-load-paye](./quick/261111-eqg-fix-payer-path-leftovers-after-load-paye/) |
 | 261112-t3s | Phase 200 post-rerun fixes: R/88 [f] union check + [f2], R/142 staleness guard + exposure RDS, 200-02-PLAN.md p143_out_rds, 200-02-SUMMARY.md | 2026-11-13 | 957e3df | [261112-t3s-phase-200-post-rerun-fixes-update-r-88-r](./quick/261112-t3s-phase-200-post-rerun-fixes-update-r-88-r/) |
 | 261112-tfm | Fix R/88 [f2] check to use IMMUNE_FLAG_DX_CODES set instead of has_autoimmune_dx proxy | 2026-11-13 | 11f3f09 | [261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-](./quick/261112-tfm-fix-r-88-f2-check-to-use-immune-flag-dx-/) |
+| 261114-s48 | Close out 2026-11-14 HiPerGator runs (202-204 complete; retire R/142 PRE201 check; R/204_gantt_before_after.R; D-203-01/02) | 2026-11-14 | (this commit) | [261114-s48](./quick/261114-s48-close-out-2026-11-14-hipergator-runs-202/) |
 | 261113-hap | Fix three test-suite failures: code_system fixture column, canonicalize_drug_name named-vector leak, local=FALSE in two source() calls | 2026-11-13 | aee6c84 | [261113-hap-fix-three-test-suite-failures-code-syste](./quick/261113-hap-fix-three-test-suite-failures-code-syste/) |
 | 261114-lv2 | export abvd_class and ever_abvd_plus in gantt_episodes_180.csv (R/142 32-col; broaden ABVD_PLUS; R/88 15bd 7 new checks; 4 new unit tests) | 2026-11-14 | 84c1a5e | [261114-lv2-export-abvd-class-and-ever-abvd-plus-in-](./quick/261114-lv2-export-abvd-class-and-ever-abvd-plus-in-/) |
 | 261114-m8m | R/88 15bb [c2] and 15bc [c1] updated 30->32 columns; R/142 Section 4C4 adds per-abvd_class and ever_abvd_plus patient counts (fmt_sup) | 2026-11-14 | 54eaa27 | [261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q](./quick/261114-m8m-r-88-30-32-col-fixes-and-r-142-pre201b-q/) |

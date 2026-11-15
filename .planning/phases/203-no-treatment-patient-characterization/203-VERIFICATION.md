@@ -1,8 +1,8 @@
 ---
 phase: 203-no-treatment-patient-characterization
 verified: 2026-11-14T00:00:00Z
-status: gaps_found
-score: 6/7 requirements verified
+status: passed
+score: 7/7 requirements verified (HiPerGator run 2026-11-14)
 gaps:
   - truth: "Schema probe confirmed before join code runs (probe-first per CLAUDE.md)"
     status: partial
@@ -181,3 +181,13 @@ No other gaps found. All NOTX-01 through NOTX-07 requirements are implemented in
 
 _Verified: 2026-11-14_
 _Verifier: Claude (gsd-verifier)_
+
+## Close-out 2026-11-14 (HiPerGator results)
+
+The probe gap is closed (schema: .planning/schemas/203_schema_inputs_20261114.md; constants applied in quick 261114-r5e). Full run done; status moved to passed (quick 261114-s48).
+
+- no_tx 3,246 / treated 4,450. First-match waterfall: TR says treated 133 (4.1%); probable prevalent / history-of HL 427 (13.2%); short follow-up 497 (15.3%); dx before coverage 27 (0.8%); NLPHL only 77 (2.4%); unexplained 2,085 (64.2%).
+- Discriminating flags: history-of-HL code 2.03x; short follow-up 1.95x. Multi-source (0.73x) and far-from-care (0.70x) are not reasons.
+- TR-treated AND observable (cleanest pipeline-miss count): 41.
+- % no_tx among observable, by primary source: USF 79, EMY 57, AVH 55, UCI 48, AMS 45, UFH 43, UMI 37, FLM 33, UAB 31.
+- R/88 SMOKE-203-01: 8/8 PASS.

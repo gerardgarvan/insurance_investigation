@@ -66,3 +66,22 @@ R --no-save
 source("R/28_episode_classification.R", local = new.env(parent = globalenv()))
 source("R/205_lot_output.R", local = new.env(parent = globalenv()))
 ```
+
+## First-run problems and status (2026-11-14, quick 261114-s48)
+
+Phase 205 status: code written; NOT run on HiPerGator; pending scope review after 202-204 results.
+
+First-run problems (earlier run, before fix):
+- Regimen labels on Radiation / SCT / Proton episodes.
+- "Other" = 6,591 episodes.
+- "NLPHL" appeared as a label.
+- BV_consolidation = 1,325.
+
+Fix: commit 46c7389 (label only systemic episodes; key regimens on treatment_type; drop Other/NLPHL).
+
+Before the next run:
+- Re-run against the Phase 204 Gantt (22,548 rows), not the pre-204 file.
+- Include a regression comparison to `abvd_class` (REGL-05 reconciliation).
+- BV_consolidation 1,325 needs review under REGL-06-C.
+
+Scope input from Phase 204: only 54.6% of treatment episodes carry `drug_names`. The remaining Rituximab (Gantt 478 vs raw 772) and Brentuximab (776 vs 954) gaps come from drug-name attribution on episodes, not missed administrations. Regimen assignment depends on `drug_names`, so the engine will under-label until attribution is addressed. Decide in scope review whether to fix attribution before or inside Phase 205.

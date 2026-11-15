@@ -1002,7 +1002,7 @@ Plans:
 
 - [x] **Phase 202: Tumor-Registry Treatment Sensitivity** -- Inspect TR columns, compare registry vs Gantt capture, deliver sensitivity workbook (TRVAL-01..07) (completed 2026-11-14)
 - [x] **Phase 203: No-Treatment Patient Characterization** -- Side-by-side profile of 3,246 no-treatment vs 4,450 treated patients, with registry join and candidate eligibility rule (NOTX-01..07) (completed 2026-11-14)
-- [ ] **Phase 204: MED_ADMIN Name-Based Capture** -- Add RAW_MEDADMIN_MED_NAME matching in R/26, rerun downstream chain, regression guard (MCAP-01..05)
+- [x] **Phase 204: MED_ADMIN Name-Based Capture** -- Add RAW_MEDADMIN_MED_NAME matching in R/26, rerun downstream chain, regression guard (MCAP-01..05) (completed 2026-11-14; 204-03 R/88 section not executed; R/204_gantt_before_after.R pending HiPerGator run)
 - [ ] **Phase 205: Regimen + Line-of-Therapy Engine** -- Date-level regimen dict + LOT counter, replaces R/28 `regimen_label` and Phase 201 relabel block; unit tests + Gantt regression guard (REGL-01..08)
 
 ## Phase Details (v3.14)
@@ -1122,5 +1122,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 202. Tumor-Registry Treatment Sensitivity | 3/3 | Complete    | 2026-11-14 |
 | 203. No-Treatment Patient Characterization | 4/4 | Complete    | 2026-11-14 |
-| 204. MED_ADMIN Name-Based Capture | 2/3 | In Progress|  |
-| 205. Regimen + Line-of-Therapy Engine | 2/3 | In Progress|  |
+| 204. MED_ADMIN Name-Based Capture | 2/3 | Complete (caveat: 204-03 not run) | 2026-11-14 |
+| 205. Regimen + Line-of-Therapy Engine | 2/3 | Code written; NOT run on HiPerGator; pending scope review after 202-204 | |

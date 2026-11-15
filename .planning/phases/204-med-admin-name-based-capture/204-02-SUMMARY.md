@@ -116,3 +116,8 @@ None. The code blocks are complete; the regression check will SKIP (not fail) if
 - `grep "REGRESSION FAIL"` returns 1 line (requirement: 1+)
 - `grep "p204_gantt_pre"` returns 6 lines (requirement: 2+)
 - `tools/rcheck.sh parse R/26_treatment_episodes.R` exits 0
+
+## HiPerGator results and correction (2026-11-14)
+
+- Results in 204-VERIFICATION.md. Episodes (90d) 19,285 -> 19,324; Gantt 180 rows 22,520 -> 22,548.
+- Correction: the MCAP-03 block described above compared CSVs before they were rebuilt, so it always passed. Block removed from R/26 (quick 261114-s48); comparison now in `R/204_gantt_before_after.R`, run after R/142.

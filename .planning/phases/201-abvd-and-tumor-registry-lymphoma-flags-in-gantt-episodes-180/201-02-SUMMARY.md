@@ -105,3 +105,7 @@ None. Plan executed as written.
 - 15bb [c2] 30-column check: PASS.
 - AC handoff note drafted in this SUMMARY.
 - SCRIPT_INDEX updated.
+
+## Retired check (2026-11-14, quick 261114-s48)
+
+The R/142 Phase 201 regression check ("regression: row count unchanged" vs `gantt_episodes_180_PRE201.csv`) and its baseline-writing block (both gated on `RUN_PRE201_REGRESSION`) were removed. They fail by design whenever upstream episodes change (Phase 204 added episodes). R/88 does not reference them. Phase 201 results stand as recorded.

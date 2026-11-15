@@ -72,3 +72,12 @@ None — this plan adds smoke infrastructure only. The underlying R/202_tr_sensi
 - Radiation: TR 138; not captured 109; captured-undated 26 (UFH, code-only); PPV 36.7%.
 - Immunotherapy: PPV 6.8% (13/192). Definitional: registry codes brentuximab vedotin as chemotherapy; first course only.
 - Follow-up changes: see `.planning/quick/261114-qv3-*/261114-qv3-SUMMARY.md` (three-tier not-captured split, sheet E_coverage_window, finer year bands, C consistency, labels/KEY, R/88 15be, helper + synthetic test).
+
+## HiPerGator results (2026-11-14)
+
+- Denominator 600; footnote 121. Chemo 46.5% within 90d overall; 80.3% (236/294) within coverage window.
+- By dx year: <=2009 <11/115; 2010-12 27.8%; 2013-15 61.7%; 2016-18 68.2%; 2019+ 80.4%.
+- Not captured (chemo): no pipeline record 154 / 22 in window; >90d after 110 / 23; >90d before 12.
+- Radiation: 115 in window, <11 within 90d, 26 code-only, 84 no pipeline record (real gap).
+- PPV: chemo 92.6%; radiation 36.7%; immunotherapy 6.8% (definitional).
+- R/88 TR-VAL-202: 12/12 PASS. Phase complete.

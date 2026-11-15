@@ -1194,23 +1194,6 @@ if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
   }
 }
 
-if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
-  # PRE201 baseline: save the 26-column file before overwriting (keep-if-exists; re-run safe).
-  pre201 <- file.path(CONFIG$output_dir, "internal", "gantt_episodes_180_PRE201.csv")
-  if (!file.exists(pre201)) {
-    if (file.exists(OUTPUT_EPISODES)) {
-      base_check201 <- read.csv(OUTPUT_EPISODES, nrows = 1)
-      stopifnot("PRE201 baseline must have 26 columns" = ncol(base_check201) == 26L)
-      file.copy(OUTPUT_EPISODES, pre201, overwrite = FALSE)
-      message(glue("  PRE201 baseline saved: {pre201}"))
-    } else {
-      message("  PRE201 baseline skipped: OUTPUT_EPISODES does not yet exist.")
-    }
-  } else {
-    message(glue("  PRE201 baseline exists (kept): {pre201}"))
-  }
-}
-
 write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
@@ -1239,29 +1222,7 @@ Example diff (first mismatch):
   }
 }
 
-if (Sys.getenv("RUN_PRE201_REGRESSION") == "TRUE") {
-  # Phase 201 regression: verify columns 1-26 are unchanged vs PRE201 baseline.
-  if (exists("pre201") && file.exists(pre201)) {
-    message("\n--- Phase 201 regression check ---")
-    base_reg201 <- read.csv(pre201,          colClasses = "character")
-    new_reg201  <- read.csv(OUTPUT_EPISODES, colClasses = "character")
-    stopifnot(
-      "regression: row count unchanged"        = nrow(new_reg201)  == nrow(base_reg201),
-      "regression: col 1-26 names unchanged"   = identical(names(new_reg201)[1:26], names(base_reg201))
-    )
-    # Multiset comparison: sorted pasted rows of first 26 columns
-    base_rows201 <- sort(do.call(paste, base_reg201[, 1:26, drop = FALSE]))
-    new_rows201  <- sort(do.call(paste, new_reg201[,  1:26, drop = FALSE]))
-    if (!identical(base_rows201, new_rows201)) {
-      diffs201 <- which(base_rows201 != new_rows201)
-      stop(glue("Phase 201 regression FAIL: {length(diffs201)} row(s) differ in original 26 columns.
-Example diff (first mismatch):
-  PRE201: {base_rows201[diffs201[1]]}
-  NEW:    {new_rows201[diffs201[1]]}"))
-    }
-    message("Phase 201 regression: PASS (26 original columns unchanged)")
-  }
-}
+# Phase 201 PRE201 regression check retired (quick 261114-s48): it fails by design when upstream episodes change.
 
 write.csv(detail_export, OUTPUT_DETAIL, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_DETAIL}"))

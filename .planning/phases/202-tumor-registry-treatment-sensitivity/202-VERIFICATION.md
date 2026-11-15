@@ -1,8 +1,8 @@
 ---
 phase: 202-tumor-registry-treatment-sensitivity
 verified: 2026-11-14T00:00:00Z
-status: human_needed
-score: 6/7 must-haves verified (TRVAL-01 pending HiPerGator probe)
+status: passed
+score: 7/7 must-haves verified (HiPerGator run 2026-11-14)
 human_verification:
   - test: "Run schema probe for TUMOR_REGISTRY_ALL treatment columns on HiPerGator (Plan 202-01 Task 0)"
     expected: ".planning/schemas/202_schema_tr_treatment_cols_YYYYMMDD.md created; column-name constants in R/202_tr_sensitivity.R (TR_CHEMO_COLS, TR_RAD_COLS, TR_IMMUNO_COLS, TR_SCT_CODE_COL, TR_SCT_DATE_COLS) updated to match confirmed column names and PENDING-PROBE comments removed"
@@ -152,3 +152,16 @@ Both gaps resolve in a single HiPerGator session: probe → update constants →
 
 _Verified: 2026-11-14_
 _Verifier: Claude (gsd-verifier)_
+
+## Close-out 2026-11-14 (HiPerGator results)
+
+All three human-verification items done 2026-11-14; status moved from human_needed to passed (quick 261114-s48).
+
+- Probe: .planning/schemas/202_schema_tr_treatment_cols_20261114.md; constants applied in quick 261114-qj1.
+- Denominator 600; footnote 121.
+- Chemo sensitivity: 46.5% within 90d overall; 80.3% (236/294) within the EHR coverage window. The 1901 sentinel-date guard did not change this.
+- By dx year (chemo): <=2009 <11/115; 2010-12 27.8%; 2013-15 61.7%; 2016-18 68.2%; 2019+ 80.4%.
+- Chemo not captured: no pipeline record 154 overall / 22 in window; >90d after 110 overall / 23 in window; >90d before 12.
+- Radiation: 115 in window; <11 captured within 90d; 26 code-only matches; 84 no pipeline record. Real capture gap.
+- PPV: chemo 92.6%; radiation 36.7%; immunotherapy 6.8% (definitional: registry first course codes BV as chemo).
+- R/88 TR-VAL-202 (SECTION 15be): 12/12 PASS.

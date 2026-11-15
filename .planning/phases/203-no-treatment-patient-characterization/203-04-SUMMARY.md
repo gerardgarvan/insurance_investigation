@@ -54,3 +54,9 @@ None — plan executed exactly as written.
 - SECTION 15bf (line 8219) appears before SECTION 16 (line 8302) — PASS
 
 ## Self-Check: PASSED
+
+## HiPerGator results (2026-11-14)
+
+- R/88 SMOKE-203-01: 8/8 PASS. no_tx 3,246 / treated 4,450.
+- Reasons waterfall, discriminating flags, observable-by-source: see 203-VERIFICATION.md "Close-out".
+- Open decisions D-203-01 and D-203-02 recorded in STATE.md "Open Decisions (v3.14)". Phase complete.

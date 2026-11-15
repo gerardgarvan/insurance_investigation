@@ -34,3 +34,5 @@ skipped: 0
 blocked: 0
 
 ## Gaps
+
+Close-out 2026-11-14 (quick 261114-s48): all 3 items done; full results in 202-VERIFICATION.md "Close-out" and 202-03-SUMMARY.md.
