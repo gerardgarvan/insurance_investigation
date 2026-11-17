@@ -170,13 +170,20 @@ message("\nComputing first HL diagnosis date from DIAGNOSIS and TUMOR_REGISTRY..
 # DIAGNOSIS earliest HL date per patient (C81 + 201.x, reuse dx_hl from Section 4)
 # Exclude sentinel dates only from the anchor-date derivation, so cohort
 # membership (code-based confirmation) is unaffected.
+# Same date key as Rule A (hl_confirmed_two_encounters): COALESCE(DX_DATE, ADMIT_DATE).
+# Before the v3.15 fix this section used DX_DATE only, so patients qualifying via the
+# ADMIT_DATE fallback got NA first_hl_dx_date.
 dx_dates <- dx_hl %>%
-  filter(is.na(DX_DATE) | DX_DATE >= SENTINEL_CUTOFF) %>%
-  filter(!is.na(DX_DATE)) %>%
+  mutate(
+    ID = as.character(ID),
+    dx_key_date = if (has_admit_212) coalesce(as.Date(DX_DATE), as.Date(ADMIT_DATE)) else as.Date(DX_DATE)
+  ) %>%
+  filter(!is.na(ID), !is.na(dx_key_date), dx_key_date >= SENTINEL_CUTOFF) %>%
   group_by(ID) %>%
-  summarise(first_dx_date_diagnosis = min(DX_DATE, na.rm = TRUE), .groups = "drop")
+  summarise(first_dx_date_diagnosis = min(dx_key_date), .groups = "drop")
 
-message(glue("  DIAGNOSIS: {format(nrow(dx_dates), big.mark=',')} patients with HL dates (C81 + 201.x)"))
+n_dx_hl_ids_212 <- n_distinct(as.character(dx_hl$ID))
+message(glue("  DIAGNOSIS: {format(nrow(dx_dates), big.mark=',')} of {format(n_dx_hl_ids_212, big.mark=',')} patients with HL rows have a usable date (COALESCE(DX_DATE, ADMIT_DATE), same key as Rule A)"))
 
 # TUMOR_REGISTRY earliest DATE_OF_DIAGNOSIS per patient
 tr_tbl <- tryCatch(get_pcornet_table("TUMOR_REGISTRY_ALL"), error = function(e) NULL)
@@ -185,7 +192,8 @@ if (!is.null(tr_tbl) && "DATE_OF_DIAGNOSIS" %in% colnames(tr_tbl)) {
     filter(!is.na(DATE_OF_DIAGNOSIS)) %>%
     group_by(ID) %>%
     summarise(first_dx_date_tr = min(DATE_OF_DIAGNOSIS, na.rm = TRUE), .groups = "drop") %>%
-    collect()
+    collect() %>%
+    mutate(ID = as.character(ID))
   message(glue("  TUMOR_REGISTRY: {format(nrow(tr_dates), big.mark=',')} patients with diagnosis dates"))
 } else {
   tr_dates <- data.frame(ID = character(), first_dx_date_tr = as.Date(character()), stringsAsFactors = FALSE)
@@ -214,14 +222,9 @@ first_dx <- dx_dates %>%
 
 message(glue("  Sentinel DX_DATE rows excluded upstream (before {SENTINEL_CUTOFF}) -- no post-hoc nullify needed"))
 
-# Log source distribution
-source_dist <- first_dx %>%
-  filter(!is.na(first_hl_dx_source)) %>%
-  count(first_hl_dx_source, name = "n_patients")
-message("  First HL diagnosis source distribution:")
-for (i in seq_len(nrow(source_dist))) {
-  message(glue("    {source_dist$first_hl_dx_source[i]}: {format(source_dist$n_patients[i], big.mark=',')}"))
-}
+# first_dx covers every patient with an HL date in either source (not only the cohort).
+# The source distribution is reported once, for the cohort, in Section 6.
+message(glue("  first_dx (all patients with any HL date, pre cohort restriction): {format(nrow(first_dx), big.mark=',')}"))
 
 # ==============================================================================
 # SECTION 6: SAVE CONFIRMED HL COHORT RDS (D-10)
@@ -234,7 +237,24 @@ confirmed_hl_cohort <- confirmed_patients %>%
   select(ID, first_hl_dx_date, first_hl_dx_source)
 src_tab_212 <- table(confirmed_hl_cohort$first_hl_dx_source, useNA = "ifany")
 message(glue("  first_hl_dx_source: {paste(names(src_tab_212), src_tab_212, sep = '=', collapse = '; ')}"))
-message(glue("  Cohort patients with NA first_hl_dx_date: {sum(is.na(confirmed_hl_cohort$first_hl_dx_date))}"))
+n_na_first_212 <- sum(is.na(confirmed_hl_cohort$first_hl_dx_date))
+message(glue("  Cohort patients with NA first_hl_dx_date: {n_na_first_212}"))
+
+# Guard: NA first_hl_dx_date is only legitimate for cohort patients with no usable date in
+# either source: TR-HL-only patients with no EHR HL row (and no TR date), or patients whose
+# only HL dates are sentinel (< SENTINEL_CUTOFF). Expected 0 here.
+ids_cohort_212 <- as.character(confirmed_hl_cohort$ID)
+ids_no_ehr_row_212 <- setdiff(ids_cohort_212, as.character(dx_hl$ID))
+ids_no_ehr_date_212 <- setdiff(as.character(dx_hl$ID), dx_dates$ID)  # EHR HL rows, none usable (sentinel/NA)
+n_expected_na_212 <- length(intersect(
+  ids_cohort_212,
+  setdiff(union(ids_no_ehr_row_212, ids_no_ehr_date_212), tr_dates$ID)
+))
+message(glue("  Expected NA (no usable date in either source): {n_expected_na_212}; of which no EHR HL row at all: {length(intersect(ids_no_ehr_row_212, setdiff(ids_cohort_212, tr_dates$ID)))}"))
+stopifnot(
+  "NA first_hl_dx_date count != cohort patients with no usable HL date in either source" =
+    n_na_first_212 == n_expected_na_212
+)
 
 # Backup the existing rds before overwrite (Phase 212 plan 04); stop if the copy fails.
 if (file.exists(OUTPUT_RDS)) {
