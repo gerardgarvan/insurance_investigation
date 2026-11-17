@@ -1149,7 +1149,12 @@ Plans:
   2. Assertion halts the run if any episode has both flags TRUE
   3. ever_abvd / ever_avd = any() over all episodes; ever_abvd_plus documented as deprecated
   4. KEY / data dictionary list all four flags; parse checks and testthat pass locally
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 210-01-PLAN.md — config AVD_INCLUDES_BV_NIVO + helper R/utils/utils_abvd_flags.R + testthat (wave 1)
+- [ ] 210-02-PLAN.md — R/142 flags, assertion, QC, 34-col schema, dictionary CSV; consumer/R/88 line list (wave 2)
+- [ ] 210-03-PLAN.md — R/206 recompute flags from drug_names, 34-col delivered file (wave 2)
+- [ ] 210-04-PLAN.md — HiPerGator run checkpoint, PENDING HIPERGATOR (wave 3)
 
 ### Phase 211: ABVD Impact Table
 **Goal**: Team can see how the new flags differ from the old and reconcile with R/209.
