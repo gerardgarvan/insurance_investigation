@@ -1127,7 +1127,7 @@ Plans:
 
 ---
 
-### v3.15 ABVD/AVD Flag Simplification and Cohort Rule Change (Active)
+### v3.15 ABVD/AVD Flag Simplification and Cohort Rule Change (Complete 2026-11-17)
 
 **Milestone Goal:** Simplify ABVD flags to drug-composition TRUE/FALSE (abvd/avd), change the cohort rule (no 7-day confirmation; >=2 HL dx on distinct encounters; TR-HL always in; TR-NHL out unless TR-HL), and rerun the chain on HiPerGator.
 

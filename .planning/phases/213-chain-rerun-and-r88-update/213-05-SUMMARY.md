@@ -20,13 +20,10 @@
 - `tools/rcheck.sh parse` R/88, R/203: OK. `tools/rcheck.sh test 203`: pass.
 - Full suite: 4 failures in `test-205-regimen-dict.R` (lines 181, 188, 198, 203: "BV mono" vs "Unrecognized systemic"). Not touched by this plan; REGIMEN_DICT behaviour vs test, needs a separate look.
 
-## PENDING HIPERGATOR: R/88 rerun
-```r
-module load R/4.5
-R --no-save
-source("R/88_smoke_test_comprehensive.R", local = new.env(parent = globalenv()))
-```
-- Expect exactly the 9 baseline failures. Paste back: final PASS/FAIL totals and names of failing checks.
+## R/88 rerun (HiPerGator, 2026-11-17) - RESULT
+- 9/1165 failed (3 skipped). The 9 failures are exactly the pre-v3.14 baseline: 192b, IMMU x2, Linkage Improvement, SMOKE-165 [5] and [11], AUTOIMMUNE-192.2 h3a-c.
+- All v3.15 checks pass: 34 columns, DEC-213-01 label set, Phase 213 section.
+- No new failures from Phase 213 edits.
 
 ## Stale outputs still on the old cohort (follow-up, v3.15)
 - R/31, R/32, R/34, R/48, R/49, R/77, R/177, R/39 runner, R/202, R/59 (if skipped). R/115: wording edit only.
