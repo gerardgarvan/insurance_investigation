@@ -9,7 +9,7 @@ progress:
   total_phases: 198
   completed_phases: 168
   total_plans: 395
-  completed_plans: 393
+  completed_plans: 395
 ---
 
 # Project State
@@ -27,7 +27,8 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 Milestone v3.15 started; roadmap phases 210-213 created.
 
 Phase 210: COMPLETE 2026-11-17 (plans 01-04; commits dcfe93a, 9a7d1d4, 8b4c794 + docs). HiPerGator run OK: 34 cols, 22,548 rows, abvd_episode 1,254, avd_episode 570, ever_abvd 1,169, ever_avd 520, both 51. Backup `output/internal/gantt_episodes_180_pre210_20261117_120409.csv`.
-Phase 211: IN PROGRESS. Plans 01-02 complete locally (parse + tests OK). Plan 03 INCOMPLETE (PENDING HIPERGATOR: probe R/209 output). Plan 04 INCOMPLETE (PENDING HIPERGATOR: run R/211). Steps in 211-03-SUMMARY.md and 211-04-SUMMARY.md.
+Phase 211: COMPLETE 2026-11-17 (4/4 plans). HiPerGator run OK: 22,548 rows old=new, 0 alignment mismatches, abvd_plus_no_bleo 37 episodes, BEACOPP-component 62. Reconciliation in 211-03-SUMMARY.md; `reconciliation` sheet code deferred (needs column-name probe).
+Phase 212: planned 2026-11-17 (headless, defaults flagged for user review); see .planning/phases/212-*/.
 
 ### Open Questions (do not decide)
 

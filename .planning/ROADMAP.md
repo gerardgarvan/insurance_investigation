@@ -1134,7 +1134,7 @@ Plans:
 ## Phases (v3.15)
 
 - [x] **Phase 210: ABVD/AVD Episode and Patient Flags** -- abvd_episode, avd_episode, mutual-exclusion assertion, ever_abvd/ever_avd, deprecate ever_abvd_plus (ABVD-01..03)
-- [ ] **Phase 211: ABVD Impact Table** -- old vs new, crosstabs, R/209 reconciliation (ABVD-04)
+- [x] **Phase 211: ABVD Impact Table** -- old vs new, crosstabs, R/209 reconciliation (ABVD-04)
 - [ ] **Phase 212: Cohort Rule Change and Waterfall** -- >=2 HL dx distinct encounters, TR-HL include, TR-NHL exclude, old-vs-new waterfall by site (COHORT-01..04)
 - [ ] **Phase 213: Chain Rerun and R/88 Update** -- backup, HiPerGator rerun with expected changes per step, R/88 update (CHAIN-01, CHAIN-02)
 
@@ -1167,8 +1167,8 @@ Plans:
 Plans:
 - [x] 211-01-PLAN.md — helpers R/utils/utils_abvd_impact.R + testthat (wave 1)
 - [x] 211-02-PLAN.md — R/211_abvd_impact_table.R core sheets (wave 2)
-- [ ] 211-03-PLAN.md — R/209 output probe (PENDING HIPERGATOR) + reconciliation sheet (wave 2)
-- [ ] 211-04-PLAN.md — HiPerGator run checkpoint, PENDING HIPERGATOR (wave 3)
+- [x] 211-03-PLAN.md — R/209 output probe + reconciliation (sheet code deferred) (wave 2)
+- [x] 211-04-PLAN.md — HiPerGator run checkpoint, done 2026-11-17 (wave 3)
 
 
 ### Phase 212: Cohort Rule Change and Waterfall
@@ -1197,6 +1197,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
-| 211. ABVD Impact Table | 2/4 | In Progress|  |
+| 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
 | 212. Cohort Rule Change | 0/0 | Not started | |
 | 213. Chain Rerun + R/88 | 0/0 | Not started | |
