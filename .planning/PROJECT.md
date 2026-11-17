@@ -8,7 +8,19 @@ A standalone R-based exploration pipeline that loads raw PCORnet CDM CSV files f
 
 A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-## Current Milestone: v3.14 HL Treatment Detection Quality
+## Current Milestone: v3.15 ABVD/AVD Flag Simplification and Cohort Rule Change
+
+**Goal:** Replace abvd_class-derived ABVD flags with drug-composition TRUE/FALSE flags (abvd_episode, avd_episode; patient ever_abvd, ever_avd); change the cohort rule (drop 7-day HL confirmation; >=2 HL dx on distinct encounters; always include TR-HL; exclude TR-NHL unless TR-HL); rerun the chain on HiPerGator.
+
+**Target features:**
+- Episode and patient ABVD/AVD flags, mutual exclusion asserted, ever_abvd_plus deprecated (Phase 210)
+- Before/after ABVD impact table reconciled with R/209 (Phase 211)
+- New cohort rule with old-vs-new waterfall by site (Phase 212)
+- Backed-up chain rerun and R/88 update (Phase 213)
+
+**Note:** v3.14 (phases 202-205) is still open (205 candidate not shipped). v3.15 phases start at 210 because R/206-R/209 scripts exist outside ROADMAP numbering. v3.15 deliberately changes cohort membership, which v3.14 prohibited.
+
+### Previous milestone (still open): v3.14 HL Treatment Detection Quality
 
 **Goal:** Validate pipeline treatment-capture sensitivity against the tumor registry, characterize confirmed-cohort patients with no captured treatment, close the MED_ADMIN name-based capture gap in R/26, and replace R/28 regimen_label with a date-level regimen + line-of-therapy engine covering all treatment types.
 

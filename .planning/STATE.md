@@ -1,8 +1,8 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.3
-milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
-status: executing
+milestone: v3.15
+milestone_name: ABVD/AVD Flag Simplification and Cohort Rule Change
+status: defining_requirements
 last_updated: "2026-11-14T23:44:18.921Z"
 last_activity: 2026-11-14
 progress:
@@ -20,9 +20,26 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** Phase 205 — regimen-line-of-therapy-engine
+**Current focus:** v3.15 Phase 210 — ABVD/AVD episode and patient flags (v3.14 Phase 205 candidate still unshipped)
 
-## Current Position
+## v3.15 Status (2026-11-17)
+
+Milestone v3.15 started; roadmap phases 210-213 created. Not started.
+
+### Open Questions (do not decide)
+
+- Should BV+AVD / Nivo+AVD count as avd_episode? (ABVD-02 reads yes for now)
+- Minimum EHR presence for TR-HL forced includes (COHORT-02)?
+- TR NHL by ICD-O-3 histology vs site field, and which histology list (COHORT-03)?
+
+### Assumptions (headless run)
+
+- Phase numbering starts at 210 (R/206-R/209 exist outside ROADMAP numbering).
+- Research skipped (research_enabled=false; no new libraries).
+- Planning only; no R code or cohort logic changed in this step.
+- R/209 is not in the local repo; figures 1,244 / 1,052 / 163 come from the request and must be verified on HiPerGator.
+
+## Current Position (v3.14, preserved)
 
 Phase: 205 (regimen-line-of-therapy-engine) — CANDIDATE BUILT, NOT SHIPPED (HiPerGator run 5, 2026-11-14; QC all pass; candidate in output/internal/p205_candidate_v4; delivered files remain Phase 204 versions)
 Plan: 3 of 3 (205-03 R/88 section not executed; ship decision pending team review)

@@ -1124,3 +1124,68 @@ Plans:
 | 203. No-Treatment Patient Characterization | 4/4 | Complete    | 2026-11-14 |
 | 204. MED_ADMIN Name-Based Capture | 2/3 | Complete (caveat: 204-03 not run) | 2026-11-14 |
 | 205. Regimen + Line-of-Therapy Engine | 2/3 | Code written; NOT run on HiPerGator; pending scope review after 202-204 | |
+
+---
+
+### v3.15 ABVD/AVD Flag Simplification and Cohort Rule Change (Active)
+
+**Milestone Goal:** Simplify ABVD flags to drug-composition TRUE/FALSE (abvd/avd), change the cohort rule (no 7-day confirmation; >=2 HL dx on distinct encounters; TR-HL always in; TR-NHL out unless TR-HL), and rerun the chain on HiPerGator.
+
+## Phases (v3.15)
+
+- [ ] **Phase 210: ABVD/AVD Episode and Patient Flags** -- abvd_episode, avd_episode, mutual-exclusion assertion, ever_abvd/ever_avd, deprecate ever_abvd_plus (ABVD-01..03)
+- [ ] **Phase 211: ABVD Impact Table** -- old vs new, crosstabs, R/209 reconciliation (ABVD-04)
+- [ ] **Phase 212: Cohort Rule Change and Waterfall** -- >=2 HL dx distinct encounters, TR-HL include, TR-NHL exclude, old-vs-new waterfall by site (COHORT-01..04)
+- [ ] **Phase 213: Chain Rerun and R/88 Update** -- backup, HiPerGator rerun with expected changes per step, R/88 update (CHAIN-01, CHAIN-02)
+
+## Phase Details (v3.15)
+
+### Phase 210: ABVD/AVD Episode and Patient Flags
+**Goal**: Episodes carry abvd_episode / avd_episode computed from their drugs; patients carry ever_abvd / ever_avd.
+**Depends on**: Phase 205 candidate decision (episode drug lists); independent of cohort phases
+**Requirements**: ABVD-01, ABVD-02, ABVD-03
+**Success Criteria**:
+  1. Flags derive from episode drugs, not abvd_class; unit tests cover ABVD, ABVD_PLUS, AVD, BV+AVD, Nivo+AVD and partial-drug cases
+  2. Assertion halts the run if any episode has both flags TRUE
+  3. ever_abvd / ever_avd = any() over all episodes; ever_abvd_plus documented as deprecated
+  4. KEY / data dictionary list all four flags; parse checks and testthat pass locally
+**Plans**: TBD
+
+### Phase 211: ABVD Impact Table
+**Goal**: Team can see how the new flags differ from the old and reconcile with R/209.
+**Depends on**: Phase 210
+**Requirements**: ABVD-04
+**Success Criteria**:
+  1. Workbook (KEY leftmost) has episode old-vs-new crosstab by abvd_class and patient ever_abvd x ever_avd crosstab, <11 suppressed
+  2. Reconciliation rows for 1,244 / 1,052 / 163 read from R/209 output by exact label (HiPerGator run: PENDING)
+**Plans**: TBD
+
+### Phase 212: Cohort Rule Change and Waterfall
+**Goal**: Cohort built under the new rule with an old-vs-new waterfall.
+**Depends on**: Open questions on TR-HL minimum EHR presence and TR-NHL definition (record answers or defaults in CONTEXT)
+**Requirements**: COHORT-01, COHORT-02, COHORT-03, COHORT-04
+**Success Criteria**:
+  1. 7-day confirmation removed; >=2 HL dx on distinct ENCOUNTERIDs and distinct dates required
+  2. TR-HL patients (UFH, ORL, TMH) always included; TR-NHL excluded unless TR-HL
+  3. Waterfall shows gained (7-day drop), gained (TR-HL), lost (TR-NHL), by site, <11 suppressed
+  4. Latest schema probe file consulted for TR column names before code is written
+**Plans**: TBD
+
+### Phase 213: Chain Rerun and R/88 Update
+**Goal**: Delivered outputs backed up and chain rerun with documented count changes; R/88 reflects new definitions.
+**Depends on**: Phases 210, 212
+**Requirements**: CHAIN-01, CHAIN-02
+**Success Criteria**:
+  1. Backup in output/internal/pre_v315_backup/ precedes any rerun; console steps and expected count changes per step documented
+  2. Chain order: cohort -> R/26 -> R/28 -> R/28 p143 -> R/53 -> R/29 -> R/52 -> R/142 -> R/206 -> R/88 (HiPerGator: PENDING)
+  3. R/88 updated; the 9 pre-v3.14 baseline failures unchanged
+**Plans**: TBD
+
+## Progress Table (v3.15)
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 210. ABVD/AVD Flags | 0/0 | Not started | |
+| 211. ABVD Impact Table | 0/0 | Not started | |
+| 212. Cohort Rule Change | 0/0 | Not started | |
+| 213. Chain Rerun + R/88 | 0/0 | Not started | |
