@@ -8,7 +8,7 @@ v3.14 requirements archived at `.planning/milestones/v3.14-REQUIREMENTS.md` (mil
 - [ ] **ABVD-01**: `abvd_episode` TRUE when the episode contains doxorubicin, bleomycin, vinblastine and dacarbazine regardless of other compounds; else FALSE. ABVD_PLUS episodes become TRUE. Computed from episode drugs, not `abvd_class`; `abvd_class` stays as a descriptive column.
 - [ ] **ABVD-02**: `avd_episode` TRUE when the episode contains doxorubicin, vinblastine and dacarbazine and no bleomycin, regardless of other compounds (BV+AVD, Nivo+AVD are TRUE). Assertion that no episode has both flags TRUE.
 - [ ] **ABVD-03**: Patient-level `ever_abvd = any(abvd_episode)`, `ever_avd = any(avd_episode)` over entire episode history; both may be TRUE. `ever_abvd_plus` kept as deprecated, documented. KEY sheet / data dictionary list all four flags.
-- [ ] **ABVD-04**: Before/after impact table (episodes and patients, old vs new, crosstab by old `abvd_class`; patient crosstab ever_abvd x ever_avd), <11 suppression; reconciled with R/209 (pipeline ever_abvd 1,244; ABVD-class-episode-derived 1,052; ever_abvd_plus 163).
+- [x] **ABVD-04**: Before/after impact table (episodes and patients, old vs new, crosstab by old `abvd_class`; patient crosstab ever_abvd x ever_avd), <11 suppression; reconciled with R/209 (pipeline ever_abvd 1,244; ABVD-class-episode-derived 1,052; ever_abvd_plus 163).
 
 ### COHORT - Cohort rule change
 - [ ] **COHORT-01**: Drop 7-day HL diagnosis confirmation; require >=2 HL diagnoses on distinct encounters (different ENCOUNTERIDs, different dates).

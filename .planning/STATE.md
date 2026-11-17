@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.15
-milestone_name: ABVD/AVD Flag Simplification and Cohort Rule Change
-status: defining_requirements
-last_updated: "2026-11-14T23:44:18.921Z"
-last_activity: 2026-11-14
+milestone: v3.3
+milestone_name: Rituximab/Methotrexate-Associated Diagnoses of Interest
+status: completed
+last_updated: "2026-11-17T17:18:24.861Z"
+last_activity: 2026-11-17
 progress:
-  total_phases: 196
-  completed_phases: 166
-  total_plans: 387
-  completed_plans: 386
+  total_phases: 198
+  completed_phases: 168
+  total_plans: 395
+  completed_plans: 392
 ---
 
 # Project State
@@ -20,7 +20,7 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.15 Phase 211 — ABVD impact table (planned; v3.14 Phase 205 candidate still unshipped)
+**Current focus:** Phase 211 — abvd-impact-table
 
 ## v3.15 Status (2026-11-17)
 
@@ -47,7 +47,7 @@ nPhase 211: planned 2026-11-17 (4 plans, .planning/phases/211-abvd-impact-table/
 Phase: 205 (regimen-line-of-therapy-engine) — CANDIDATE BUILT, NOT SHIPPED (HiPerGator run 5, 2026-11-14; QC all pass; candidate in output/internal/p205_candidate_v4; delivered files remain Phase 204 versions)
 Plan: 3 of 3 (205-03 R/88 section not executed; ship decision pending team review)
 Status: Phases 202, 203, 204 COMPLETE 2026-11-14 (204 caveat: plan 204-03 R/88 section not executed)
-Last activity: 2026-11-14
+Last activity: 2026-11-17
 
 ## Prior Position (v3.13 final)
 
