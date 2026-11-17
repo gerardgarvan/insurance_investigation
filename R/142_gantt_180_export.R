@@ -19,7 +19,8 @@
 #   - output/tables/cancer_summary.csv              (Phase 115: 7-day confirmed data)
 #
 # Outputs:
-#   - output/gantt_episodes_180.csv  (32 columns; Phase 201b adds abvd_class / ever_abvd_plus at cols 31-32; cols 1-30 unchanged from Phase 201)
+#   - output/gantt_episodes_180.csv  (34 columns; Phase 201b adds abvd_class / ever_abvd_plus at cols 31-32; Phase 210 adds avd_episode / ever_avd at cols 33-34; cols 1-32 unchanged)
+#   - output/gantt_episodes_180_flag_dictionary.csv (aggregate-only flag dictionary + QC row)
 #   - output/gantt_detail_180.csv    (14 columns, same schema as gantt_detail.csv)
 #
 # Requirements: EP-180-01, EP-180-02
@@ -92,7 +93,9 @@ EPISODES_SCHEMA <- c(
   # Phase 201: + ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx (+4 columns, now 30 total)
   "ever_abvd", "abvd_episode", "tr_hl_dx", "tr_nhl_dx",
   # Phase 201b: + abvd_class, ever_abvd_plus (+2 columns, now 32 total)
-  "abvd_class", "ever_abvd_plus"
+  "abvd_class", "ever_abvd_plus",
+  # Phase 210: + avd_episode, ever_avd (+2 columns, now 34 total)
+  "avd_episode", "ever_avd"
 )
 
 DETAIL_SCHEMA <- c(
@@ -898,14 +901,30 @@ abvd_class[episodes_export$treatment_type != "Chemotherapy"] <- NA_character_
 
 message("\n--- Section 4C4: Regimen label (Phase 205 assign_regimen output) ---")
 
+# Phase 210 (ABVD-01..03): abvd_episode / avd_episode are derived from drug_names
+# (plus J-code evidence in triggering_codes) via compute_abvd_avd_flags(), not from
+# abvd_class. abvd_class stays descriptive and is passed only for the JCODE_ABVD
+# fallback: a JCODE_ABVD episode with no drug or recognised J-code evidence keeps
+# abvd_episode TRUE (abvd_jcode_fallback, QC only, not exported).
+# AVD_INCLUDES_BV_NIVO controls whether BV/Nivo + AVD episodes count as avd_episode.
+flags_210 <- compute_abvd_avd_flags(
+  episodes_export$drug_names, episodes_export$treatment_type,
+  abvd_class = abvd_class, code_text = episodes_export$triggering_codes)
+n_jcode_fallback_ep <- sum(flags_210$abvd_jcode_fallback)
+message(glue("  AVD_INCLUDES_BV_NIVO = {AVD_INCLUDES_BV_NIVO}"))
+
 episodes_export <- episodes_export |>
   dplyr::mutate(
     abvd_class   = abvd_class,
-    abvd_episode = abvd_class %in% c("ABVD", "AVD", "JCODE_ABVD")
+    abvd_episode = flags_210$abvd_episode,
+    avd_episode  = flags_210$avd_episode
   ) |>
   dplyr::group_by(patient_id) |>
   dplyr::mutate(
-    ever_abvd      = any(abvd_episode),
+    ever_abvd      = any(abvd_episode),   # full episode history
+    ever_avd       = any(avd_episode),    # full episode history
+    # DEPRECATED (Phase 210): old definition, any abvd_class == ABVD_PLUS; retained
+    # for compatibility; use ever_abvd / ever_avd
     ever_abvd_plus = any(abvd_class == "ABVD_PLUS", na.rm = TRUE)
   ) |>
   dplyr::ungroup()
@@ -913,7 +932,18 @@ episodes_export <- episodes_export |>
 stopifnot(
   "abvd_episode only on Chemotherapy rows" =
     !any(episodes_export$abvd_episode & episodes_export$treatment_type != "Chemotherapy"),
+  "abvd_episode and avd_episode mutually exclusive" =
+    !any(episodes_export$abvd_episode & episodes_export$avd_episode),
+  "avd_episode only on Chemotherapy rows" =
+    !any(episodes_export$avd_episode & episodes_export$treatment_type != "Chemotherapy"),
   "ever_abvd never NA" = !anyNA(episodes_export$ever_abvd),
+  "ever_avd never NA" = !anyNA(episodes_export$ever_avd),
+  "ever_abvd == any(abvd_episode) within patient" =
+    identical(episodes_export$ever_abvd,
+              patient_ever_flag(episodes_export$patient_id, episodes_export$abvd_episode)),
+  "ever_avd == any(avd_episode) within patient" =
+    identical(episodes_export$ever_avd,
+              patient_ever_flag(episodes_export$patient_id, episodes_export$avd_episode)),
   "ever_abvd_plus never NA" = !anyNA(episodes_export$ever_abvd_plus),
   "ever_abvd_plus consistent: plus only where abvd_class == ABVD_PLUS" =
     all(episodes_export$ever_abvd_plus[!is.na(episodes_export$abvd_class) &
@@ -993,6 +1023,30 @@ stopifnot(
   for (r in rownames(ct_abvd))
     for (cc in colnames(ct_abvd))
       message(glue("    abvd_episode={r}, regimen_label={cc}: {fmt_sup(ct_abvd[r, cc])}"))
+
+  # Phase 210 flags QC (counts only; 1-10 shown as <11; no patient IDs)
+  message("  -- Phase 210 flags --")
+  pt_abvd <- unique(episodes_export$patient_id[episodes_export$ever_abvd])
+  pt_avd  <- unique(episodes_export$patient_id[episodes_export$ever_avd])
+  message(glue("  episodes abvd_episode TRUE:            {fmt_sup(sum(episodes_export$abvd_episode))}"))
+  message(glue("  episodes avd_episode TRUE:             {fmt_sup(sum(episodes_export$avd_episode))}"))
+  message(glue("  patients ever_abvd:                    {fmt_sup(length(pt_abvd))}"))
+  message(glue("  patients ever_avd:                     {fmt_sup(length(pt_avd))}"))
+  message(glue("  patients ever_abvd and ever_avd:       {fmt_sup(length(intersect(pt_abvd, pt_avd)))}"))
+  message(glue("  patients ever_abvd_plus (deprecated):  {fmt_sup(n_ever_abvd_plus_pt)}"))
+  message(glue("  JCODE_ABVD fallback episodes (no drug/code evidence, abvd_episode kept TRUE): {fmt_sup(n_jcode_fallback_ep)}"))
+  abvd_cls210 <- ifelse(is.na(chemo_ep$abvd_class) | chemo_ep$abvd_class == "", "(none)", chemo_ep$abvd_class)
+  for (flg in c("abvd_episode", "avd_episode")) {
+    ct210 <- table(abvd_class = abvd_cls210, flag = chemo_ep[[flg]])
+    message(glue("  Cross-tab abvd_class x {flg} (Chemotherapy rows):"))
+    for (r in rownames(ct210))
+      for (cc in colnames(ct210))
+        message(glue("    abvd_class={r}, {flg}={cc}: {fmt_sup(ct210[r, cc])}"))
+  }
+  # Old-rule comparison: abvd_class in ABVD/AVD/JCODE_ABVD vs new abvd_episode | avd_episode
+  old_rule <- chemo_ep$abvd_class %in% c("ABVD", "AVD", "JCODE_ABVD")
+  new_rule <- chemo_ep$abvd_episode | chemo_ep$avd_episode
+  message(glue("  Old-rule vs new episode flag: old TRUE/new FALSE {fmt_sup(sum(old_rule & !new_rule))}; old FALSE/new TRUE {fmt_sup(sum(!old_rule & new_rule))}"))
 
   # Top drug_names for disagreements: new TRUE, R/28 not ABVD
   agree_miss <- chemo_ep |>
@@ -1148,7 +1202,9 @@ episodes_export <- episodes_export %>%
     # Phase 201: ABVD and TR flags (+4 columns, now 30 total)
     ever_abvd, abvd_episode, tr_hl_dx, tr_nhl_dx,
     # Phase 201b: ABVD class and patient-level ABVD_PLUS flag (+2 columns, now 32 total)
-    abvd_class, ever_abvd_plus
+    abvd_class, ever_abvd_plus,
+    # Phase 210: + avd_episode, ever_avd (+2 columns, now 34 total)
+    avd_episode, ever_avd
   )
 
 detail_export <- detail_export %>%
@@ -1203,6 +1259,16 @@ write.csv(episodes_export, OUTPUT_EPISODES, row.names = FALSE, na = "")
 message(glue("  Wrote {OUTPUT_EPISODES}"))
 message(glue("    {format(nrow(episodes_export), big.mark = ',')} rows, {ncol(episodes_export)} columns"))
 
+# Phase 210: flag dictionary (no patient-level data) + suppressed fallback QC row for Phase 211
+flag_dict_210 <- rbind(
+  abvd_flag_dictionary(),
+  data.frame(column = "qc: jcode_abvd_fallback_episodes", level = "qc",
+             definition = fmt_sup(n_jcode_fallback_ep), status = "qc",
+             stringsAsFactors = FALSE))
+OUTPUT_FLAG_DICT <- file.path(dirname(OUTPUT_EPISODES), "gantt_episodes_180_flag_dictionary.csv")
+write.csv(flag_dict_210, OUTPUT_FLAG_DICT, row.names = FALSE)
+message(glue("  Wrote {OUTPUT_FLAG_DICT}"))
+
 if (Sys.getenv("RUN_PRE199_REGRESSION") == "TRUE") {
   # Phase 199 regression: verify the 23 original columns are unchanged vs PRE199 baseline.
   if (file.exists(pre199)) {
@@ -1249,6 +1315,7 @@ if (file.exists(ep90_path)) {
 message(glue("  Episodes:  {OUTPUT_EPISODES}"))
 message(glue("  Detail:    {OUTPUT_DETAIL}"))
 message(glue("  Phase 201 columns 27-30: {paste(EPISODES_SCHEMA[27:30], collapse = ', ')}"))
+message(glue("  Phase 210 columns 33-34: {paste(EPISODES_SCHEMA[33:34], collapse = ', ')}"))
 
 
 # Phase 143 D-04: fill-rate parity check
