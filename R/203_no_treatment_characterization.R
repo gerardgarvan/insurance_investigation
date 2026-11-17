@@ -120,8 +120,8 @@ for (nm in names(pin_info))
 # ==============================================================================
 
 TX_TYPES <- c("Chemotherapy", "Immunotherapy", "Radiation", "SCT", "Proton Therapy")
-EXPECTED_NO_TX   <- 3246L
-EXPECTED_TREATED <- 4450L
+EXPECTED_NO_TX   <- 4283L
+EXPECTED_TREATED <- 4896L
 POP_TOLERANCE    <- 50L
 
 cohort <- readRDS(pin_cohort$path)
@@ -162,8 +162,8 @@ if (!pop_ok)
 # Non-cohort Gantt patients: reported in QC only.
 n_death_only <- length(setdiff(setdiff(gantt_all_ids, cohort$ID), gantt_tx_ids))
 n_tx_only    <- length(setdiff(gantt_tx_ids, cohort$ID))
-message(glue("[R203] not in cohort: death-only {n_death_only} (expect 166); ",
-             "tx-only {n_tx_only} (expect 558)"))
+message(glue("[R203] not in cohort: death-only {n_death_only} (expect 0; Gantt is cohort-only since Phase 213); ",
+             "tx-only {n_tx_only} (expect 0)"))
 
 # Age at dx: Gantt HL Diagnosis row (age_at_episode), one per patient.
 age_dx <- gantt |>
@@ -580,10 +580,10 @@ sheet_E <- build_sheet_E(char_pt, sup_col, pct_sup)  # R/utils/utils_notx.R
 n_missing <- function(x) sum(is.na(x))
 sheet_QC <- tibble(
   check = c(
-    "no_treatment (expected 3,246 +/- 50)", "treated (expected 4,450 +/- 50)", "total cohort",
+    "no_treatment (expected 4,283 +/- 50)", "treated (expected 4,896 +/- 50)", "total cohort",
     "population assertion within tolerance",
-    "not in cohort: death-only Gantt patients (expected 166)",
-    "not in cohort: tx-only Gantt patients (expected 558)",
+    "not in cohort: death-only Gantt patients (expected 0)",
+    "not in cohort: tx-only Gantt patients (expected 0)",
     "missing: age at dx (no Gantt HL Diagnosis row)",
     "missing: first usable encounter (none, or sentinel only)",
     "missing: R/169 single_source_care join",

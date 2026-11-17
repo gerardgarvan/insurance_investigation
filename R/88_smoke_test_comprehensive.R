@@ -7525,8 +7525,8 @@ if (!file.exists(gantt_180_path_bb)) {
 } else {
   gantt_180_hdr_bb <- names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE))
-  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 32 columns", # 32 since Phase 201b abvd_class/ever_abvd_plus
-    length(gantt_180_hdr_bb) == 32L)
+  p1922_chk("AUTOIMMUNE-FLAG-192.2 [c2] gantt_episodes_180.csv has 34 columns", # 34 since v3.15 (Phase 210 avd_episode/ever_avd at 33-34; 32 since Phase 201b)
+    length(gantt_180_hdr_bb) == 34L)
   # (d) autoimmune_dx_code_system is at position 23 (cols 24-26 added in Phase 199)
   p1922_chk("AUTOIMMUNE-FLAG-192.2 [d2] gantt_episodes_180.csv autoimmune_dx_code_system at position 23",
     which(names(readr::read_csv(gantt_180_path_bb, n_max = 0L,
@@ -7675,8 +7675,8 @@ if (!file.exists(gantt_180_path_bc)) {
   g180_bc <- readr::read_csv(gantt_180_path_bc, n_max = 0L,
     col_types = readr::cols(.default = readr::col_character()), show_col_types = FALSE)
   g180_nms <- names(g180_bc)
-  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 32 columns", # 32 since Phase 201b abvd_class/ever_abvd_plus
-    length(g180_nms) == 32L)
+  p199_chk("IMMUNE-FLAG-199 [c1] gantt_episodes_180.csv has 34 columns", # 34 since v3.15 (Phase 210 avd_episode/ever_avd at 33-34; 32 since Phase 201b)
+    length(g180_nms) == 34L)
   p199_chk("IMMUNE-FLAG-199 [c2] immune_flag at column 24",
     isTRUE(g180_nms[24L] == "immune_flag"))
   p199_chk("IMMUNE-FLAG-199 [c3] ever_brentuximab at column 25",
@@ -7953,13 +7953,14 @@ p201_chk("ABVD-TR-201 [a6] build_tr_lymphoma_flags() exists",
 # Real-data checks — skip all when gantt_episodes_180.csv is absent
 gantt_180_path_bd <- file.path(CONFIG$output_dir, "gantt_episodes_180.csv")
 if (!file.exists(gantt_180_path_bd)) {
-  p201_skip_fn("ABVD-TR-201 [c1] 32 columns (file absent — run R/142 first)")  # 32 since Phase 201b
+  p201_skip_fn("ABVD-TR-201 [c1] 34 columns (file absent — run R/142 first)")  # 34 since v3.15
   p201_skip_fn("ABVD-TR-201 [c2] ever_abvd at column 27 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c3] abvd_episode at column 28 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c4] tr_hl_dx at column 29 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c5] tr_nhl_dx at column 30 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c6] abvd_class at column 31 (file absent)")
   p201_skip_fn("ABVD-TR-201 [c7] ever_abvd_plus at column 32 (file absent)")
+  p201_skip_fn("ABVD-TR-201 [c8] avd_episode at column 33 and ever_avd at column 34 (file absent)")
   p201_skip_fn("ABVD-TR-201 [d1] ever_abvd/abvd_episode value domain (file absent)")
   p201_skip_fn("ABVD-TR-201 [d2] tr_hl_dx/tr_nhl_dx value domain (file absent)")
   p201_skip_fn("ABVD-TR-201 [d3] abvd_class value set valid (file absent)")
@@ -7984,8 +7985,8 @@ if (!file.exists(gantt_180_path_bd)) {
   g180_bd_nms <- names(g180_bd)
 
   # [c1]--[c7] column count and positions
-  p201_chk("ABVD-TR-201 [c1] gantt_episodes_180.csv has 32 columns",  # 32 since Phase 201b
-    length(g180_bd_nms) == 32L)
+  p201_chk("ABVD-TR-201 [c1] gantt_episodes_180.csv has 34 columns",  # 34 since v3.15 (Phase 210 adds 33-34)
+    length(g180_bd_nms) == 34L)
   p201_chk("ABVD-TR-201 [c2] ever_abvd at column 27",
     isTRUE(g180_bd_nms[27L] == "ever_abvd"))
   p201_chk("ABVD-TR-201 [c3] abvd_episode at column 28",
@@ -8000,6 +8001,9 @@ if (!file.exists(gantt_180_path_bd)) {
   p201_chk("ABVD-TR-201 [c7] ever_abvd_plus at column 32",
     "ever_abvd_plus" %in% g180_bd_nms &&
       which(g180_bd_nms == "ever_abvd_plus") == 32L)
+  p201_chk("ABVD-TR-201 [c8] avd_episode at column 33 and ever_avd at column 34 (v3.15)",
+    length(g180_bd_nms) >= 34L &&
+      isTRUE(g180_bd_nms[33L] == "avd_episode") && isTRUE(g180_bd_nms[34L] == "ever_avd"))
 
   # Read full data for remaining checks
   g180_bd_dat <- read.csv(gantt_180_path_bd, header = TRUE,
@@ -8015,10 +8019,16 @@ if (!file.exists(gantt_180_path_bd)) {
     all(g180_bd_dat$tr_hl_dx  %in% c("TRUE", "FALSE", "")) &&
     all(g180_bd_dat$tr_nhl_dx %in% c("TRUE", "FALSE", "")))
 
-  # [d3] abvd_class value set (Phase 201b adds BV+AVD and Nivo+AVD)
-  p201_chk("ABVD-TR-201 [d3] abvd_class value set valid",
-    {
-      valid_cls <- c("ABVD", "AVD", "JCODE_ABVD", "ABVD_PLUS", "BV+AVD", "Nivo+AVD", "")
+  # [d3] abvd_class value set. v3.15 / DEC-213-01: abvd_class carries the Phase 205
+  # regimen_label for all chemotherapy rows (R/142 line ~899), so the valid set is the
+  # REGIMEN_DICT labels (R/00_config.R) + REGIMEN_UNRECOGNIZED_LABEL + the ABVD-family
+  # labels from utils_regimen.R (ABVD, AVD, ABVD_PLUS, BV+AVD, Nivo+AVD) + JCODE_ABVD + blank.
+  p201_chk("ABVD-TR-201 [d3] abvd_class value set = Phase 205 regimen_label set (DEC-213-01)",
+    exists("REGIMEN_DICT") && exists("REGIMEN_UNRECOGNIZED_LABEL") && {
+      dict_lbl <- vapply(names(REGIMEN_DICT), function(nm) {
+        l <- REGIMEN_DICT[[nm]]$label; if (is.null(l)) nm else l }, character(1))
+      valid_cls <- c(dict_lbl, REGIMEN_UNRECOGNIZED_LABEL,
+                     "ABVD", "AVD", "ABVD_PLUS", "BV+AVD", "Nivo+AVD", "JCODE_ABVD", "")
       all(g180_bd_dat$abvd_class %in% valid_cls)
     })
 
@@ -8435,11 +8445,10 @@ if (file.exists(p206_live) && file.exists(p206_pre)) {
   p206_g   <- utils::read.csv(p206_live, colClasses = "character", na.strings = "", check.names = FALSE)
   p206_old <- utils::read.csv(p206_pre,  colClasses = "character", na.strings = "", check.names = FALSE)
 
-  p206_chk("DECISIONS-206 [b] delivered file has 32 columns", ncol(p206_g) == 32L)
-  p206_chk("DECISIONS-206 [c] abvd_class value set unchanged from pre-decisions (Phase 201 set, no 205-only labels)",
-           all(unique(p206_g$abvd_class[!is.na(p206_g$abvd_class)]) %in%
-               unique(p206_old$abvd_class[!is.na(p206_old$abvd_class)])) &&
-           !any(grepl("partial", p206_g$abvd_class, ignore.case = TRUE)))
+  p206_chk("DECISIONS-206 [b] delivered file has 34 columns (v3.15)", ncol(p206_g) == 34L)
+  # [c] RETIRED in Phase 213 (v3.15): "abvd_class value set unchanged from pre-decisions (no 205-only
+  # labels)" is superseded by DEC-213-01 (2026-11-17), which ships Phase 205 regimen labels for all
+  # rows. The value-set check now lives in ABVD-TR-201 [d3]. Not loosened: replaced.
 
   p206_support <- if (exists("SUPPORTIVE_AGENTS")) SUPPORTIVE_AGENTS else
     c("Leuprolide", "Goserelin", "Triptorelin", "Histrelin", "Nafarelin", "Buserelin")
@@ -8459,7 +8468,7 @@ if (file.exists(p206_live) && file.exists(p206_pre)) {
   p206_chk("DECISIONS-206 [e] ever_abvd and ever_abvd_plus constant within patient",
            p206_const("ever_abvd") && p206_const("ever_abvd_plus"))
 } else {
-  for (p206_l in c("[b] 32 columns", "[c] value set", "[d] GnRH-only ABVD_PLUS", "[e] flags constant within patient")) {
+  for (p206_l in c("[b] 34 columns", "[d] GnRH-only ABVD_PLUS", "[e] flags constant within patient")) {
     p206_skip_fn(paste0("DECISIONS-206 ", p206_l, " -- output/gantt_episodes_180.csv or pre-decisions copy absent; run R/206 on HiPerGator"))
   }
 }

@@ -1136,7 +1136,7 @@ Plans:
 - [x] **Phase 210: ABVD/AVD Episode and Patient Flags** -- abvd_episode, avd_episode, mutual-exclusion assertion, ever_abvd/ever_avd, deprecate ever_abvd_plus (ABVD-01..03)
 - [x] **Phase 211: ABVD Impact Table** -- old vs new, crosstabs, R/209 reconciliation (ABVD-04)
 - [x] **Phase 212: Cohort Rule Change and Waterfall** -- >=2 HL dx distinct encounters, TR-HL include, TR-NHL exclude, old-vs-new waterfall by site (COHORT-01..04)
-- [ ] **Phase 213: Chain Rerun and R/88 Update** -- backup, HiPerGator rerun with expected changes per step, R/88 update (CHAIN-01, CHAIN-02)
+- [x] **Phase 213: Chain Rerun and R/88 Update** -- backup, HiPerGator rerun with expected changes per step, R/88 update (CHAIN-01, CHAIN-02)
 
 ## Phase Details (v3.15)
 
@@ -1198,11 +1198,11 @@ Plans:
   3. R/88 updated; the 9 pre-v3.14 baseline failures unchanged
 **Plans**: 5 plans
 Plans:
-- [ ] 213-01-PLAN.md - backup, R/169 rerun, repoint R/208/R/212 pins, PENDING HIPERGATOR (wave 1)
-- [ ] 213-02-PLAN.md - R/26, R/28, R/28 p143 pass, expected unchanged, PENDING HIPERGATOR (wave 2)
-- [ ] 213-03-PLAN.md - R/53, R/29, R/52, PENDING HIPERGATOR (wave 3)
-- [ ] 213-04-PLAN.md - R/142, R/206 direct mode, label diff, PENDING HIPERGATOR (wave 4)
-- [ ] 213-05-PLAN.md - R/88 update, R/203 -> R/208, stale list, PENDING HIPERGATOR (wave 5)
+- [x] 213-01-PLAN.md - backup, R/169 rerun, repoint R/208/R/212 pins, PENDING HIPERGATOR (wave 1)
+- [x] 213-02-PLAN.md - R/26, R/28, R/28 p143 pass, expected unchanged, PENDING HIPERGATOR (wave 2)
+- [x] 213-03-PLAN.md - R/53, R/29, R/52, PENDING HIPERGATOR (wave 3)
+- [x] 213-04-PLAN.md - R/142, R/206 direct mode, label diff, PENDING HIPERGATOR (wave 4)
+- [x] 213-05-PLAN.md - R/88 update, R/203 -> R/208, stale list, PENDING HIPERGATOR (wave 5)
 
 ## Progress Table (v3.15)
 
@@ -1211,4 +1211,4 @@ Plans:
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
 | 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
 | 212. Cohort Rule Change | 5/5 | Complete | 2026-11-17 |
-| 213. Chain Rerun + R/88 | 0/5 | Planned | |
+| 213. Chain Rerun + R/88 | 5/5 | Complete | 2026-11-17 |
