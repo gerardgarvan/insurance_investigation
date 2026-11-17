@@ -1196,7 +1196,13 @@ Plans:
   1. Backup in output/internal/pre_v315_backup/ precedes any rerun; console steps and expected count changes per step documented
   2. Chain order: cohort -> R/26 -> R/28 -> R/28 p143 -> R/53 -> R/29 -> R/52 -> R/142 -> R/206 -> R/88 (HiPerGator: PENDING)
   3. R/88 updated; the 9 pre-v3.14 baseline failures unchanged
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 213-01-PLAN.md - backup, R/169 rerun, repoint R/208/R/212 pins, PENDING HIPERGATOR (wave 1)
+- [ ] 213-02-PLAN.md - R/26, R/28, R/28 p143 pass, expected unchanged, PENDING HIPERGATOR (wave 2)
+- [ ] 213-03-PLAN.md - R/53, R/29, R/52, PENDING HIPERGATOR (wave 3)
+- [ ] 213-04-PLAN.md - R/142, R/206 direct mode, label diff, PENDING HIPERGATOR (wave 4)
+- [ ] 213-05-PLAN.md - R/88 update, R/203 -> R/208, stale list, PENDING HIPERGATOR (wave 5)
 
 ## Progress Table (v3.15)
 
@@ -1205,4 +1211,4 @@ Plans:
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
 | 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
 | 212. Cohort Rule Change | 5/5 | Complete | 2026-11-17 |
-| 213. Chain Rerun + R/88 | 0/0 | Not started | |
+| 213. Chain Rerun + R/88 | 0/5 | Planned | |

@@ -1,0 +1,22 @@
+test_that("chk_expect reports OK / MISMATCH and suppresses 1-10", {
+  src <- file.path(testthat::test_path("..", ".."), "R", "tools", "213_chain_checks.R")
+  skip_if_not(file.exists(src))
+  e <- new.env(); sys.source(src, envir = e)
+  expect_message(r <- e$chk_expect("x", 9179L, 9179L), "OK")
+  expect_true(r)
+  expect_message(r <- e$chk_expect("x", 9179L, 9000L), "MISMATCH")
+  expect_false(r)
+  expect_message(e$chk_expect("x", 0L, 5L), "<11")
+  expect_false(suppressMessages(e$chk_expect("x", 1L, NA_integer_)))
+})
+test_that("chk_gantt_hl counts HL Diagnosis rows", {
+  src <- file.path(testthat::test_path("..", ".."), "R", "tools", "213_chain_checks.R")
+  skip_if_not(file.exists(src))
+  e <- new.env(); sys.source(src, envir = e)
+  f <- tempfile(fileext = ".csv")
+  d <- data.frame(patient_id = c(paste0("p", 1:12), "p1"),
+                  treatment_type = c(rep("HL Diagnosis", 12), "Chemotherapy"))
+  utils::write.csv(d, f, row.names = FALSE)
+  expect_true(suppressMessages(e$chk_gantt_hl(f, expected = 12L)))
+  expect_false(suppressMessages(e$chk_gantt_hl(f, expected = 13L)))
+})
