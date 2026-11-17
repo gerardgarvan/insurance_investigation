@@ -20,7 +20,9 @@
 - **D-212-02 (open Q2):** TR-NHL = existing `tr_nhl_dx` (`ICD_CODES$nhl_histology`; D-201-03/D-05 "unverified" caveat kept). The 21 unlisted lymphoid codes neither include nor exclude; report them (code + n, <11 suppressed).
 - **D-212-03:** Both TR-HL and TR-NHL (11) -> included (spec: "unless also TR-HL").
 - **D-212-04:** TR-NHL exclusion also removes patients who meet rule A if TR-NHL and not TR-HL.
-- **D-212-05:** HL dx rows with NA ENCOUNTERID cannot count as a distinct encounter; dropped from rule A. Report patients whose qualification would change if NA ids were counted.
+- **D-212-05 (REPLACED by user, 2026-11-17):** an HL dx row with missing ENCOUNTERID counts as its own encounter keyed by its diagnosis date (DX_DATE, else ADMIT_DATE). The waterfall reports rows and patients that needed this fallback, by site, <11 suppressed (sheet `fallback_by_site`). Original default (drop NA rows) superseded.
+- **D-212-05b (USER, 2026-11-17):** config `DISTINCT_ENC_REQUIRE_DIFF_DATES` in R/00_config.R (default TRUE): rule A = >= 2 HL dx on distinct encounters falling on different dates; FALSE = distinct ENCOUNTERIDs only. Env override `DISTINCT_ENC_REQUIRE_DIFF_DATES=FALSE`.
+- **D-212-10 (USER, 2026-11-17):** R/211 reconciliation sheet waived (figures in 211-03-SUMMARY.md are sufficient).
 - **D-212-06:** Site = DEMOGRAPHIC `SOURCE` (probed in 184 schema). TR SOURCE (UFH/ORL/TMH) reported separately for TR rows.
 - **D-212-07:** Waterfall steps are sequential, each patient counted once: old cohort -> lost by 2-encounter rule (old members failing A, not TR-HL) -> gained by dropping 7-day (A and not old) -> gained by TR-HL (TR-HL, not in old, not in A) -> lost by TR-NHL exclusion -> new cohort. Must reconcile to the new total.
 - **D-212-08:** first_hl_dx_date for TR-HL-only patients comes from the existing TR DATE_OF_DIAGNOSIS logic in R/47 Section 5; patients with no date stay in the cohort with NA date (reported).
@@ -37,3 +39,4 @@
 
 ## Assumptions (headless run)
 - Planner and checker agents not spawned; plans checked by hand against the four success criteria.
+- Execution run (2026-11-17): plans 02 and 03 executed locally; plan 01 probe not yet run. R/212 column constants (ID, ENCOUNTERID, DX, DX_DATE, ADMIT_DATE, SOURCE) are unverified until the 212 probe returns; R/212 stops if no `.planning/schemas/212_schema_*.md` exists. Plan 03 therefore is code-complete but not verified. Plan 04 write path not executed (awaits review of the R/212 workbook).

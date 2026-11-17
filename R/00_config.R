@@ -773,6 +773,14 @@ DOI_ATTRIBUTION_WINDOW_DAYS <- 90L
 # share one value without redefining it locally.
 SENTINEL_CUTOFF <- as.Date("1910-01-01")
 
+# Phase 212: cohort rule A (>= 2 HL diagnoses on distinct encounters).
+# TRUE  = the two encounters must also fall on different dates (default).
+# FALSE = distinct ENCOUNTERIDs only.
+# Override at run time with env DISTINCT_ENC_REQUIRE_DIFF_DATES=FALSE.
+DISTINCT_ENC_REQUIRE_DIFF_DATES <- !identical(
+  toupper(Sys.getenv("DISTINCT_ENC_REQUIRE_DIFF_DATES", "TRUE")), "FALSE"
+)
+
 # AUTOIMMUNE_DX_CODES: ICD-10 and ICD-9 prefix sets for autoimmune diagnosis detection.
 # Keys = normalized code prefix (dots removed, uppercase); values = official condition title.
 # ICD-9 keys were populated in Phase 192.2 from the Rituximab sheet of

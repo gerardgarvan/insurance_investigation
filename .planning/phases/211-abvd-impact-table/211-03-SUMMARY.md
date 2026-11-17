@@ -26,6 +26,9 @@
 - R/209 values read at run time by exact column name, one match or stop (print available names). Column names must come from a schema probe file; run `probe_inputs("211", files = "output/gantt_episodes_180_flags_20261117.csv")` on HiPerGator first. No numbers typed in code.
 - Notes: measured wording, no causal claims.
 
+## Waiver (2026-11-17, user)
+- The R/211 `reconciliation` sheet is WAIVED. The figures recorded above are sufficient; no follow-up quick task needed.
+
 ## Deviations
 - Roadmap criterion 2 says "read by exact label from R/209 output"; the R/209 output is a patient/episode CSV (38 cols), so values are read by column + any() / n_distinct, not by row label.
 - Sheet code not written: blocked on column names (CLAUDE.md probe rule). Carry to a follow-up quick task.
