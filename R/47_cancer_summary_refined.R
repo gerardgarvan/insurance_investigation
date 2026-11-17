@@ -127,7 +127,7 @@ message("\nQuerying DIAGNOSIS for HL cohort confirmation (C81 + 201.x)...")
 dx_tbl_212 <- get_pcornet_table("DIAGNOSIS")
 has_admit_212 <- "ADMIT_DATE" %in% colnames(dx_tbl_212)
 dx_hl <- dx_tbl_212 %>%
-  select(ID, ENCOUNTERID, DX, DX_TYPE, DX_DATE, if (has_admit_212) ADMIT_DATE) %>%
+  select(any_of(c('ID', 'ENCOUNTERID', 'DX', 'DX_TYPE', 'DX_DATE', if (has_admit_212) 'ADMIT_DATE'))) %>%
   collect() %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
   filter(str_detect(DX_norm, "^C81") | str_detect(DX_norm, "^201"))

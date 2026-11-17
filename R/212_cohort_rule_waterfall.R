@@ -76,11 +76,12 @@ demog <- get_pcornet_table("DEMOGRAPHIC") |> select(all_of(c(C_ID, C_SRC))) |> c
 # ENCOUNTER SOURCE counts per patient (aggregated in DuckDB; joined in R, no IN list).
 # Used only for patients without an R/169 primary_source row (R/169 logic; date window not applied).
 source_counts <- get_pcornet_table("ENCOUNTER") |>
-  filter(!is.na(.data[[C_SRC]])) |>
-  count(.data[[C_ID]], .data[[C_SRC]], name = "n_enc_at_source") |> collect()
+  select(all_of(c(C_ID, C_SRC))) |>
+  filter(!is.na(SOURCE)) |>
+  count(ID, SOURCE, name = "n_enc_at_source") |> collect()
 names(source_counts)[1:2] <- c("ID", "SOURCE")
-enc_ids <- get_pcornet_table("ENCOUNTER") |> distinct(.data[[C_ID]]) |> collect() |> pull(1)
-tr_ids <- get_pcornet_table("TUMOR_REGISTRY_ALL") |> distinct(.data[[C_ID]]) |> collect() |> pull(1)
+enc_ids <- get_pcornet_table("ENCOUNTER") |> select(all_of(C_ID)) |> distinct() |> collect() |> pull(1)
+tr_ids <- get_pcornet_table("TUMOR_REGISTRY_ALL") |> select(all_of(C_ID)) |> distinct() |> collect() |> pull(1)
 close_pcornet_con()
 
 ids_demog <- unique(as.character(demog[[C_ID]]))
