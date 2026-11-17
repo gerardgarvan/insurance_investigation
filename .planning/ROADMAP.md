@@ -1163,7 +1163,13 @@ Plans:
 **Success Criteria**:
   1. Workbook (KEY leftmost) has episode old-vs-new crosstab by abvd_class and patient ever_abvd x ever_avd crosstab, <11 suppressed
   2. Reconciliation rows for 1,244 / 1,052 / 163 read from R/209 output by exact label (HiPerGator run: PENDING)
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 211-01-PLAN.md — helpers R/utils/utils_abvd_impact.R + testthat (wave 1)
+- [ ] 211-02-PLAN.md — R/211_abvd_impact_table.R core sheets (wave 2)
+- [ ] 211-03-PLAN.md — R/209 output probe (PENDING HIPERGATOR) + reconciliation sheet (wave 2)
+- [ ] 211-04-PLAN.md — HiPerGator run checkpoint, PENDING HIPERGATOR (wave 3)
+
 
 ### Phase 212: Cohort Rule Change and Waterfall
 **Goal**: Cohort built under the new rule with an old-vs-new waterfall.
@@ -1191,6 +1197,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
-| 211. ABVD Impact Table | 0/0 | Not started | |
+| 211. ABVD Impact Table | 0/4 | Planned | |
 | 212. Cohort Rule Change | 0/0 | Not started | |
 | 213. Chain Rerun + R/88 | 0/0 | Not started | |

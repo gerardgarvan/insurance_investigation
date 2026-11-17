@@ -27,6 +27,7 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 Milestone v3.15 started; roadmap phases 210-213 created.
 
 Phase 210: COMPLETE 2026-11-17 (plans 01-04; commits dcfe93a, 9a7d1d4, 8b4c794 + docs). HiPerGator run OK: 34 cols, 22,548 rows, abvd_episode 1,254, avd_episode 570, ever_abvd 1,169, ever_avd 520, both 51. Backup `output/internal/gantt_episodes_180_pre210_20261117_120409.csv`.
+nPhase 211: planned 2026-11-17 (4 plans, .planning/phases/211-abvd-impact-table/). R/209 is not in the repo (not created); plan 03 needs a HiPerGator probe of its output before the reconciliation code. Plans 01-02 executable locally.
 
 ### Open Questions (do not decide)
 
