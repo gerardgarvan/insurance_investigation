@@ -896,6 +896,13 @@ ABVD_COMPONENTS      <- c("Doxorubicin", "Bleomycin", "Vinblastine", "Dacarbazin
 AVD_COMPONENTS       <- c("Doxorubicin", "Vinblastine", "Dacarbazine")   # D-11 bleomycin-dropped
 ABVD_EXCLUDING_DRUGS <- c(BRENTUXIMAB_DRUG, "Nivolumab")                 # BV+AVD / Nivo+AVD are not ABVD (D-201-01)
 
+# Phase 210 decision: TRUE = BV+AVD and Nivo+AVD episodes count as avd_episode;
+# FALSE = episodes containing Brentuximab or Nivolumab are avd_episode FALSE.
+# abvd_episode is unaffected. Env var allows toggling on HiPerGator without code edits.
+AVD_INCLUDES_BV_NIVO <- as.logical(Sys.getenv("AVD_INCLUDES_BV_NIVO", "TRUE"))
+stopifnot("AVD_INCLUDES_BV_NIVO must be TRUE or FALSE" =
+            isTRUE(AVD_INCLUDES_BV_NIVO) || isFALSE(AVD_INCLUDES_BV_NIVO))
+
 # Phase 201b: date-level concurrency window for detecting BV+AVD / Nivo+AVD.
 # A brentuximab/nivolumab administration date within +/- this many days of a chemo
 # episode's administration-date span counts as concurrent (same regimen, not sequential).
