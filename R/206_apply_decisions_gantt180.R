@@ -93,7 +93,7 @@ if (identical(R206_MODE, "direct")) {
   d <- read_chr(LIVE_GANTT)
   message("  AVD_INCLUDES_BV_NIVO = ", AVD_INCLUDES_BV_NIVO)
   res <- direct_mode_checks(d, SCHEMA_34, expected_hl = CHAIN_EXPECTED_COHORT)
-  for (nm in names(res)) chk_expect(paste0("R/206 direct: ", nm), 1L, as.integer(res[[nm]]))
+  for (nm in names(res)) chk_true(paste0("R/206 direct: ", nm), res[[nm]])
   message("  rows: ", fmt_sup(nrow(d)), "; patients: ", fmt_sup(length(unique(d$patient_id))),
           "; abvd_episode episodes: ", fmt_sup(sum(d$abvd_episode == "TRUE")),
           "; avd_episode episodes: ", fmt_sup(sum(d$avd_episode == "TRUE")))

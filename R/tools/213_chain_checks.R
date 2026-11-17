@@ -17,6 +17,14 @@ chk_expect <- function(label, expected, actual) {
   invisible(ok)
 }
 
+# Boolean check line: OK/FAIL, no small-cell suppression (a logical is not a count).
+# NA or non-logical-length-1 cond counts as FAIL. Returns TRUE when cond is TRUE (invisible).
+chk_true <- function(label, cond) {
+  ok <- length(cond) == 1L && !is.na(cond) && isTRUE(as.logical(cond))
+  message(sprintf("[213 CHECK] %-48s %s", label, if (ok) "OK" else "FAIL"))
+  invisible(ok)
+}
+
 # Cohort rds: rows and distinct IDs both 9,179.
 chk_cohort <- function(path = file.path("output", "confirmed_hl_cohort.rds"),
                        expected = CHAIN_EXPECTED_COHORT) {

@@ -58,3 +58,16 @@ test_that("filter_gantt_to_cohort drops non-cohort rows and enforces HL parity",
                    data.frame(patient_id = "p3", treatment_type = "Chemotherapy"))
   expect_error(suppressMessages(e$filter_gantt_to_cohort(ep_bad, det, ids)))
 })
+
+test_that("chk_true prints OK/FAIL without small-cell suppression", {
+  src <- here::here("R", "tools", "213_chain_checks.R")
+  e <- new.env(); sys.source(src, envir = e)
+  expect_message(r <- e$chk_true("x", TRUE), "OK")
+  expect_true(r)
+  expect_message(r <- e$chk_true("x", FALSE), "FAIL")
+  expect_false(r)
+  expect_false(suppressMessages(e$chk_true("x", NA)))
+  expect_false(suppressMessages(e$chk_true("x", c(TRUE, TRUE))))
+  msg <- testthat::capture_messages(e$chk_true("x", TRUE))
+  expect_false(grepl("<11", msg))
+})
