@@ -1166,7 +1166,7 @@ Plans:
 **Plans**: 4 plans
 Plans:
 - [x] 211-01-PLAN.md — helpers R/utils/utils_abvd_impact.R + testthat (wave 1)
-- [ ] 211-02-PLAN.md — R/211_abvd_impact_table.R core sheets (wave 2)
+- [x] 211-02-PLAN.md — R/211_abvd_impact_table.R core sheets (wave 2)
 - [ ] 211-03-PLAN.md — R/209 output probe (PENDING HIPERGATOR) + reconciliation sheet (wave 2)
 - [ ] 211-04-PLAN.md — HiPerGator run checkpoint, PENDING HIPERGATOR (wave 3)
 
@@ -1197,6 +1197,6 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
-| 211. ABVD Impact Table | 1/4 | In Progress|  |
+| 211. ABVD Impact Table | 2/4 | In Progress|  |
 | 212. Cohort Rule Change | 0/0 | Not started | |
 | 213. Chain Rerun + R/88 | 0/0 | Not started | |
