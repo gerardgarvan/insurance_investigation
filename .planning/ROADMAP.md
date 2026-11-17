@@ -1173,14 +1173,20 @@ Plans:
 
 ### Phase 212: Cohort Rule Change and Waterfall
 **Goal**: Cohort built under the new rule with an old-vs-new waterfall.
-**Depends on**: Open questions on TR-HL minimum EHR presence and TR-NHL definition (record answers or defaults in CONTEXT)
+**Depends on**: Open questions answered by defaults D-212-01/02 in 212-CONTEXT.md (flagged for user review)
 **Requirements**: COHORT-01, COHORT-02, COHORT-03, COHORT-04
 **Success Criteria**:
   1. 7-day confirmation removed; >=2 HL dx on distinct ENCOUNTERIDs and distinct dates required
   2. TR-HL patients (UFH, ORL, TMH) always included; TR-NHL excluded unless TR-HL
   3. Waterfall shows gained (7-day drop), gained (TR-HL), lost (TR-NHL), by site, <11 suppressed
   4. Latest schema probe file consulted for TR column names before code is written
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 212-01-PLAN.md - schema probe DIAGNOSIS/ENCOUNTER/DEMOGRAPHIC/TR, PENDING HIPERGATOR (wave 1)
+- [ ] 212-02-PLAN.md - helpers R/utils/utils_cohort_rule.R + testthat (wave 1)
+- [ ] 212-03-PLAN.md - R/212 read-only dry-run waterfall workbook (wave 2)
+- [ ] 212-04-PLAN.md - R/47 rule swap + rds backup (wave 3)
+- [ ] 212-05-PLAN.md - HiPerGator dry run, review, apply, verify, PENDING HIPERGATOR (wave 4)
 
 ### Phase 213: Chain Rerun and R/88 Update
 **Goal**: Delivered outputs backed up and chain rerun with documented count changes; R/88 reflects new definitions.
@@ -1198,5 +1204,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
 | 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
-| 212. Cohort Rule Change | 0/0 | Not started | |
+| 212. Cohort Rule Change | 0/5 | Planned | |
 | 213. Chain Rerun + R/88 | 0/0 | Not started | |
