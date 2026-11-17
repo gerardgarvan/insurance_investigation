@@ -1135,7 +1135,7 @@ Plans:
 
 - [x] **Phase 210: ABVD/AVD Episode and Patient Flags** -- abvd_episode, avd_episode, mutual-exclusion assertion, ever_abvd/ever_avd, deprecate ever_abvd_plus (ABVD-01..03)
 - [x] **Phase 211: ABVD Impact Table** -- old vs new, crosstabs, R/209 reconciliation (ABVD-04)
-- [ ] **Phase 212: Cohort Rule Change and Waterfall** -- >=2 HL dx distinct encounters, TR-HL include, TR-NHL exclude, old-vs-new waterfall by site (COHORT-01..04)
+- [x] **Phase 212: Cohort Rule Change and Waterfall** -- >=2 HL dx distinct encounters, TR-HL include, TR-NHL exclude, old-vs-new waterfall by site (COHORT-01..04)
 - [ ] **Phase 213: Chain Rerun and R/88 Update** -- backup, HiPerGator rerun with expected changes per step, R/88 update (CHAIN-01, CHAIN-02)
 
 ## Phase Details (v3.15)
@@ -1182,11 +1182,11 @@ Plans:
   4. Latest schema probe file consulted for TR column names before code is written
 **Plans**: 5 plans
 Plans:
-- [ ] 212-01-PLAN.md - schema probe DIAGNOSIS/ENCOUNTER/DEMOGRAPHIC/TR, PENDING HIPERGATOR (wave 1)
-- [ ] 212-02-PLAN.md - helpers R/utils/utils_cohort_rule.R + testthat (wave 1)
-- [ ] 212-03-PLAN.md - R/212 read-only dry-run waterfall workbook (wave 2)
-- [ ] 212-04-PLAN.md - R/47 rule swap + rds backup (wave 3)
-- [ ] 212-05-PLAN.md - HiPerGator dry run, review, apply, verify, PENDING HIPERGATOR (wave 4)
+- [x] 212-01-PLAN.md - schema probe DIAGNOSIS/ENCOUNTER/DEMOGRAPHIC/TR, PENDING HIPERGATOR (wave 1)
+- [x] 212-02-PLAN.md - helpers R/utils/utils_cohort_rule.R + testthat (wave 1)
+- [x] 212-03-PLAN.md - R/212 read-only dry-run waterfall workbook (wave 2)
+- [x] 212-04-PLAN.md - R/47 rule swap + rds backup (wave 3)
+- [x] 212-05-PLAN.md - HiPerGator dry run, review, apply, verify, PENDING HIPERGATOR (wave 4)
 
 ### Phase 213: Chain Rerun and R/88 Update
 **Goal**: Delivered outputs backed up and chain rerun with documented count changes; R/88 reflects new definitions.
@@ -1204,5 +1204,5 @@ Plans:
 |-------|----------------|--------|-----------|
 | 210. ABVD/AVD Flags | 4/4 | Complete | 2026-11-17 |
 | 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
-| 212. Cohort Rule Change | 0/5 | Planned | |
+| 212. Cohort Rule Change | 5/5 | Complete | 2026-11-17 |
 | 213. Chain Rerun + R/88 | 0/0 | Not started | |

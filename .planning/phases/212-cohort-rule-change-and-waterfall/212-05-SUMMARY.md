@@ -1,4 +1,4 @@
-# 212-05 SUMMARY — PENDING HIPERGATOR (incomplete)
+# 212-05 SUMMARY — COMPLETE 2026-11-17
 
 Order: probe -> R/212 dry run -> user review -> (plan 04 R/47 write, not yet executed) -> verify.
 
@@ -38,7 +38,7 @@ Dry run reviewed by user 2026-11-17 (HiPerGator, DISTINCT_ENC_REQUIRE_DIFF_DATES
 ## Review outcome (2026-11-17)
 - User approved applying the rule. D-212-06 revised (R/169 primary_source). Plan 04 code complete (212-04-SUMMARY.md).
 
-## Step 3: apply and verify (PENDING HIPERGATOR)
+## Step 3: apply and verify (commands; run done, see Final result)
 Prerequisite: `output/internal/single_source_care_20261008.rds` (R/169) exists. Sync the repo first (R/47, R/212, R/utils/utils_cohort_rule.R).
 ```
 module load R/4.5
@@ -78,6 +78,21 @@ print(read.xlsx(f, "waterfall_by_site"), row.names = FALSE); print(read.xlsx(f, 
 - Paste back: the 3b/3c lines, the R/212 console lines (waterfall steps, site-label line), and the two sheet prints. On error: error + ~20 lines.
 - Close-out: copy `output/212_cohort_waterfall_<RUN_DATE>.xlsx` unchanged into this phase folder.
 - Rollback: copy the pre212 backup over `output/confirmed_hl_cohort.rds`.
+
+## Final result (HiPerGator 2026-11-17, R/47 applied after two fixes)
+- Fixes before the final apply: select via `any_of`; first_hl_dx_date computed on Rule A rows (COALESCE(DX_DATE, ADMIT_DATE)).
+- `output/confirmed_hl_cohort.rds`: 9,179 patients, 0 NA first_hl_dx_date.
+- first_hl_dx_source: Both 58 / DIAGNOSIS 8,728 / TUMOR_REGISTRY 393.
+- Waterfall (R/212 vs original cohort): old 7,696; lost_2enc 0; gained_drop7 1,635; gained_trhl 0; lost_trnhl 152; new 9,179.
+- By R/169 primary_source, old -> new: AMS 330->335; AVH 544->628; CHP <11->27; EMY 519->533; FLM 3,412->3,601; NCH 44->45; ORL 34->500; TMA 13->73; TMC 15->54; UAB 341->894; UCI 225->237; UFH 779->758; UMI 1,194->1,249; USF 239->245.
+- Old-cohort backup (the only valid "old"): `output/internal/pre_v315_backup/confirmed_hl_cohort_pre212_20261117_133152.rds`.
+- `confirmed_hl_cohort_intermediate_NAdates_20261117_134033.rds` (renamed from the 134033 backup) is an intermediate with NA dates. Never use as "old".
+- R/212 default `R212_COHORT_RDS` now pins the 133152 file (R/212_cohort_rule_waterfall.R, pin_old). Env var still overrides.
+- Remaining: copy `output/212_cohort_waterfall_<RUN_DATE>.xlsx` unchanged into this phase folder (on HiPerGator sync-back).
+
+## Assumptions (headless run)
+- Final counts and the backup file name were taken from the user's message; no HiPerGator access here.
+- R/47's backup glob `pre212` matches only the 133152 file once the 134033 file is renamed; I did not re-verify the glob.
 
 ## Phase 213 reruns (cohort changed 7,696 -> 9,179; see ROADMAP chain order)
 - R/169 first: `single_source_care` / primary_source must cover the 1,483 net new patients (re-run R/208's pinned R208_SSC_RDS to the new file).

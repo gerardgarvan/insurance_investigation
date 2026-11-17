@@ -13,7 +13,9 @@
 #   B  plus every TR-HL patient (any TUMOR_REGISTRY_ALL SOURCE) present in DEMOGRAPHIC
 #   C  minus TR-NHL patients who are not also TR-HL
 #
-# Inputs:  env R212_COHORT_RDS (default output/confirmed_hl_cohort.rds; set to the
+# Inputs:  env R212_COHORT_RDS (default: pinned original-cohort backup
+#            output/internal/pre_v315_backup/confirmed_hl_cohort_pre212_20261117_133152.rds;
+#            never the *_intermediate_NAdates_* file; formerly: set to the
 #            pre212 backup after R/47 is applied)
 #          DuckDB: DIAGNOSIS, ENCOUNTER, DEMOGRAPHIC, TUMOR_REGISTRY_ALL
 #          Column names: constants below; they come from the Phase 212 schema probe
@@ -53,7 +55,7 @@ pin_input <- function(env_var, default_rel) {
   if (!file.exists(p)) stop("[R212] input missing: ", p)
   list(path = p, pinned = nzchar(v))
 }
-pin_old <- pin_input("R212_COHORT_RDS", file.path("output", "confirmed_hl_cohort.rds"))
+pin_old <- pin_input("R212_COHORT_RDS", file.path("output", "internal", "pre_v315_backup", "confirmed_hl_cohort_pre212_20261117_133152.rds"))
 pin_ssc <- pin_input("R212_SSC_RDS", file.path("output", "internal", "single_source_care_20261008.rds"))
 ssc <- readRDS(pin_ssc$path)
 if (!all(c("ID", "primary_source") %in% names(ssc))) stop("[R212] R/169 rds lacks ID / primary_source")
