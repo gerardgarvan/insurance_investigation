@@ -43,7 +43,8 @@ message(glue("  probe file: {PROBE_FILE}"))
 # Column-name constants (confirm against the probe file)
 C_ID <- "ID"; C_ENC <- "ENCOUNTERID"; C_DXDATE <- "DX_DATE"; C_DX <- "DX"
 C_ADMIT <- "ADMIT_DATE"      # fallback date on DIAGNOSIS, used only if the column exists
-C_SITE <- "SOURCE"           # DEMOGRAPHIC site (D-212-06)
+C_SRC <- "SOURCE"            # DEMOGRAPHIC SOURCE: reference only (includes LNK); ENCOUNTER SOURCE
+# Site attribution = R/169 primary_source (D-212-06), as in R/208.
 
 # Copied verbatim from R/211_abvd_impact_table.R:25-30 (prefix changed to R212)
 pin_input <- function(env_var, default_rel) {
@@ -53,6 +54,9 @@ pin_input <- function(env_var, default_rel) {
   list(path = p, pinned = nzchar(v))
 }
 pin_old <- pin_input("R212_COHORT_RDS", file.path("output", "confirmed_hl_cohort.rds"))
+pin_ssc <- pin_input("R212_SSC_RDS", file.path("output", "internal", "single_source_care_20261008.rds"))
+ssc <- readRDS(pin_ssc$path)
+if (!all(c("ID", "primary_source") %in% names(ssc))) stop("[R212] R/169 rds lacks ID / primary_source")
 old_cohort <- readRDS(pin_old$path)
 if (!"ID" %in% names(old_cohort)) stop("[R212] cohort rds has no ID column")
 ids_old <- unique(as.character(old_cohort$ID))
@@ -68,13 +72,22 @@ dx_hl <- dx_tbl |> select(all_of(dx_cols)) |> collect() |>
   mutate(DX_norm = toupper(str_remove_all(.data[[C_DX]], "\\."))) |>
   filter(str_detect(DX_norm, "^C81") | str_detect(DX_norm, "^201")) |>
   select(-DX_norm, -all_of(C_DX))
-demog <- get_pcornet_table("DEMOGRAPHIC") |> select(all_of(c(C_ID, C_SITE))) |> collect()
+demog <- get_pcornet_table("DEMOGRAPHIC") |> select(all_of(c(C_ID, C_SRC))) |> collect()
+# ENCOUNTER SOURCE counts per patient (aggregated in DuckDB; joined in R, no IN list).
+# Used only for patients without an R/169 primary_source row (R/169 logic; date window not applied).
+source_counts <- get_pcornet_table("ENCOUNTER") |>
+  filter(!is.na(.data[[C_SRC]])) |>
+  count(.data[[C_ID]], .data[[C_SRC]], name = "n_enc_at_source") |> collect()
+names(source_counts)[1:2] <- c("ID", "SOURCE")
 enc_ids <- get_pcornet_table("ENCOUNTER") |> distinct(.data[[C_ID]]) |> collect() |> pull(1)
 tr_ids <- get_pcornet_table("TUMOR_REGISTRY_ALL") |> distinct(.data[[C_ID]]) |> collect() |> pull(1)
 close_pcornet_con()
 
 ids_demog <- unique(as.character(demog[[C_ID]]))
-site_map <- tibble(ID = as.character(demog[[C_ID]]), site = as.character(demog[[C_SITE]]))
+demog_src_map <- tibble(ID = as.character(demog[[C_ID]]), site = as.character(demog[[C_SRC]]))
+ps <- assign_primary_source(ids_demog, ssc, source_counts)
+site_map <- ps |> select(ID, site)
+message(glue("  site = R/169 primary_source: from R/169 {fmt_sup(sum(ps$origin == 'r169'))}; computed {fmt_sup(sum(ps$origin == 'computed'))}; unassigned {fmt_sup(sum(ps$origin == 'unassigned'))}"))
 message(glue("  HL dx rows: {format(nrow(dx_hl), big.mark=',')}; DEMOGRAPHIC: {format(length(ids_demog), big.mark=',')}; fallback date col present: {has_admit}"))
 
 # ---- Rule A -----------------------------------------------------------------------
@@ -105,6 +118,17 @@ wf <- cohort_waterfall_by_site(sets, site_map)
 for (s in names(COHORT_WATERFALL_STEPS)) {
   message(glue("  {s}: {fmt_sup(length(sets[[s]]))}"))
 }
+
+# Reference only: gained patients by DEMOGRAPHIC SOURCE (includes LNK, not a site).
+gained_ids <- union(sets$gained_drop7, sets$gained_trhl)
+gained_demog_src <- tibble(ID = gained_ids) |>
+  left_join(demog_src_map, by = "ID") |>
+  mutate(site = coalesce(site, "Not in DEMOGRAPHIC")) |>
+  count(site, name = "n") |> arrange(desc(n)) |>
+  mutate(n_patients = fmt_sup(n)) |> select(`DEMOGRAPHIC SOURCE` = site, n_patients)
+# Origin of the site label for patients in the new cohort.
+site_origin <- ps |> filter(ID %in% sets$new) |> count(origin, name = "n") |>
+  mutate(n_patients = fmt_sup(n)) |> select(origin, n_patients)
 
 wf_all <- wf |> filter(site == "ALL") |> select(step, label, n_patients = n_display)
 wf_site <- wf |> filter(site != "ALL") |>
@@ -162,29 +186,38 @@ decisions <- tibble(
     "TR-NHL exclusion also removes patients meeting rule A if TR-NHL and not TR-HL.",
     "USER (2026-11-17): HL dx row with missing ENCOUNTERID counts as its own encounter keyed by DX_DATE, else ADMIT_DATE. Rows/patients needing this fallback reported by site (fallback_by_site).",
     "USER (2026-11-17): config DISTINCT_ENC_REQUIRE_DIFF_DATES (default TRUE): >= 2 HL dx on distinct encounters on different dates; FALSE = distinct ENCOUNTERIDs only.",
-    "Site = DEMOGRAPHIC SOURCE.",
+    "UPDATED 2026-11-17: site = R/169 primary_source (as R/208), NOT DEMOGRAPHIC SOURCE (includes LNK, linked multi-site records). Patients without an R/169 row get the R/169 logic from ENCOUNTER SOURCE counts; none -> 'unassigned'. DEMOGRAPHIC SOURCE kept as a reference sheet only.",
     "Sequential waterfall, each patient counted once; reconciles to new total (checked, script stops otherwise).",
     "first_hl_dx_date for TR-HL-only patients from existing TR DATE_OF_DIAGNOSIS logic in R/47 Section 5 (applied in R/47, not here).",
     "Rule applied in R/47 only after this dry run is reviewed; R/212 does not write the rds."
   ),
-  status = "FLAG FOR USER REVIEW"
+  status = c(rep("FLAG FOR USER REVIEW", 6), "APPROVED 2026-11-17 (revised)", rep("FLAG FOR USER REVIEW", 3))
 )
 
 key <- tibble(
   item = c("run_date", "script", "mode", "cohort_rds", "cohort_rds_pinned", "probe_file",
-           "DISTINCT_ENC_REQUIRE_DIFF_DATES", "suppression", "caveat", "sheets"),
+           "DISTINCT_ENC_REQUIRE_DIFF_DATES", "r169_ssc_rds", "r169_ssc_pinned", "site_attribution",
+           "review_2026_11_17_dry_run", "review_2026_11_17_rule", "review_2026_11_17_gained_check",
+           "review_2026_11_17_site_note", "suppression", "caveat", "sheets"),
   value = c(RUN_DATE, "R/212_cohort_rule_waterfall.R", "READ-ONLY dry run (no rds written)",
             pin_old$path, as.character(pin_old$pinned), PROBE_FILE,
             as.character(DISTINCT_ENC_REQUIRE_DIFF_DATES),
+            pin_ssc$path, as.character(pin_ssc$pinned),
+            "R/169 primary_source (not DEMOGRAPHIC SOURCE, which includes LNK); patients without an R/169 row: R/169 logic from ENCOUNTER SOURCE, else 'unassigned'.",
+            "User review of the HiPerGator dry run (2026-11-17), approved: old 7,696; lost_2enc 0; gained_drop7 1,635; gained_trhl 0 (all 174 TR-HL not in old cohort already gained by drop7); lost_trnhl 152; new 9,179.",
+            "Rules (a) and (b) give identical results: all 9,331 DEMOGRAPHIC patients have >= 2 active HL dx dates. DISTINCT_ENC_REQUIRE_DIFF_DATES stays TRUE. The extract was pulled on HL dx, so the 2-encounter rule is non-binding; the TR-NHL exclusion is the only rule that removes patients.",
+            "All 1,635 gained patients have active C81/201 codes. Distinct active-HL dx dates among gained: 2 = 554; 3-4 = 341; 5-9 = 273; 10+ = 467.",
+            "Gains are concentrated at UAB and ORL, consistent with the 7-day rule being more restrictive at those sites (see waterfall_by_site, R/169 primary_source).",
             "Counts 1-10 shown as <11; no patient-level data in this workbook.",
             "nhl_histology list is UNVERIFIED (D-201-03).",
-            "waterfall_all, waterfall_by_site, tr_hl_checks, tr_hl_by_site, unlisted_lymphoid, fallback_by_site, na_encounter_effect, decisions")
+            "waterfall_all, waterfall_by_site (R/169 primary_source), tr_hl_checks, tr_hl_by_site, unlisted_lymphoid, fallback_by_site, na_encounter_effect, gained_by_demog_source (reference), site_label_origin, decisions")
 )
 
 sheets <- list(KEY = key, waterfall_all = wf_all, waterfall_by_site = wf_site,
                tr_hl_checks = tr_hl_checks, tr_hl_by_site = tr_hl_site,
                unlisted_lymphoid = unlisted_sheet, fallback_by_site = fb_site,
-               na_encounter_effect = na_effect, decisions = decisions)
+               na_encounter_effect = na_effect, gained_by_demog_source = gained_demog_src,
+               site_label_origin = site_origin, decisions = decisions)
 
 wb <- createWorkbook()
 modifyBaseFont(wb, fontSize = 10, fontName = "Arial")

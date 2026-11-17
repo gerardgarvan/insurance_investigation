@@ -18,7 +18,7 @@
 #               classify_codes() (R/utils/utils_cancer.R)
 #
 # Requirements: CREF-01: Remove D-codes (in-situ/benign neoplasms) and ICD-9 210-239
-#               CREF-02: Filter to patients with 2+ HL codes (C81 + 201.x) 7+ days apart
+#               CREF-02: v3.15 rule (Phase 212): 2+ HL dx on distinct encounters, plus TR-HL, minus TR-NHL-only
 #               CREF-03: Compute first HL diagnosis date (DIAGNOSIS + TUMOR_REGISTRY)
 # ==============================================================================
 
@@ -109,31 +109,57 @@ message(glue("  Unique patients after D-code removal: {format(n_distinct(cancer_
 message(glue("  Unique codes after D-code removal: {format(n_distinct(cancer_summary$cancer_code), big.mark=',')}"))
 
 # ==============================================================================
-# SECTION 4: COHORT CONFIRMATION -- C81 codes, 7-day gap (CREF-02)
+# SECTION 4: COHORT CONFIRMATION -- v3.15 rule (Phase 212, CREF-02)
 # ==============================================================================
 
 message("\nQuerying DIAGNOSIS for HL cohort confirmation (C81 + 201.x)...")
 
+# v3.15 rule (R/utils/utils_cohort_rule.R; .planning/phases/212-*/212-CONTEXT.md):
+#   A  >= 2 HL dx (C81 / 201.x) on distinct encounters (and, with
+#      DISTINCT_ENC_REQUIRE_DIFF_DATES = TRUE, on different dates). Missing ENCOUNTERID
+#      counts as its own encounter keyed by DX_DATE, else ADMIT_DATE.
+#   B  plus every TR-HL patient (any TUMOR_REGISTRY_ALL SOURCE) present in DEMOGRAPHIC
+#   C  minus TR-NHL patients who are not also TR-HL
+# Replaces the former 7-day gap rule. Cohort membership change approved 2026-11-17.
+# Column names ENCOUNTERID / ADMIT_DATE: .planning/schemas/212_schema_*.md (probe).
+
 # Query all HL diagnosis codes: ICD-10 C81 + ICD-9 201.x (per D-09)
-dx_hl <- get_pcornet_table("DIAGNOSIS") %>%
-  select(ID, DX, DX_TYPE, DX_DATE) %>%
+dx_tbl_212 <- get_pcornet_table("DIAGNOSIS")
+has_admit_212 <- "ADMIT_DATE" %in% colnames(dx_tbl_212)
+dx_hl <- dx_tbl_212 %>%
+  select(ID, ENCOUNTERID, DX, DX_TYPE, DX_DATE, if (has_admit_212) ADMIT_DATE) %>%
   collect() %>%
   mutate(DX_norm = toupper(str_remove_all(DX, "\\."))) %>%
   filter(str_detect(DX_norm, "^C81") | str_detect(DX_norm, "^201"))
 
 message(glue("  Found {format(nrow(dx_hl), big.mark=',')} HL diagnosis rows (C81 + 201.x)"))
 
-# Deduplicate before date span calculation (Pitfall 1)
-# Group by ID only (not per sub-code) -- different HL sub-codes (C81.x + 201.x) count toward threshold together (per D-10)
-confirmed_patients <- dx_hl %>%
-  filter(!is.na(DX_DATE)) %>%
-  distinct(ID, DX_DATE) %>%
-  group_by(ID) %>%
-  filter(as.numeric(max(DX_DATE) - min(DX_DATE)) >= 7) %>%
-  ungroup() %>%
-  distinct(ID)
+dx2 <- hl_confirmed_two_encounters(
+  dx_hl, id_col = "ID", enc_col = "ENCOUNTERID", date_col = "DX_DATE",
+  require_diff_dates = DISTINCT_ENC_REQUIRE_DIFF_DATES,
+  fallback_date_col = if (has_admit_212) "ADMIT_DATE" else NULL
+)
+message(glue("  Rule A (2 HL encounters; DISTINCT_ENC_REQUIRE_DIFF_DATES = {DISTINCT_ENC_REQUIRE_DIFF_DATES}): {format(nrow(dx2), big.mark=',')} patients"))
 
-message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',')} patients (2+ C81/201.x codes, 7-day gap)"))
+ids_demog_212 <- get_pcornet_table("DEMOGRAPHIC") %>% distinct(ID) %>% collect() %>% pull(ID) %>% as.character()
+ids_old_212 <- if (file.exists(OUTPUT_RDS)) unique(as.character(readRDS(OUTPUT_RDS)$ID)) else character(0)
+
+# build_tr_lymphoma_flags() opens and closes its own DuckDB connection, which drops the
+# shared pcornet_con. All DIAGNOSIS/DEMOGRAPHIC pulls above are done; reopen afterwards.
+trf_212 <- build_tr_lymphoma_flags(ids_demog_212)
+if (exists("USE_DUCKDB") && isTRUE(USE_DUCKDB) && !exists("pcornet_con", envir = .GlobalEnv)) {
+  open_pcornet_con(db_path = CONFIG$cache$duckdb_path, read_only = TRUE)
+}
+ids_tr_hl_212  <- trf_212$patient_id[trf_212$tr_hl_dx  %in% TRUE]
+ids_tr_nhl_212 <- trf_212$patient_id[trf_212$tr_nhl_dx %in% TRUE]
+
+sets_212 <- apply_cohort_rule_v315(dx2$ID, ids_tr_hl_212, ids_tr_nhl_212, ids_old_212, ids_demog_212)
+for (s_nm in names(COHORT_WATERFALL_STEPS)) {
+  message(glue("  {s_nm}: {format(length(sets_212[[s_nm]]), big.mark=',')}"))
+}
+confirmed_patients <- tibble(ID = sets_212$new)
+
+message(glue("Confirmed HL cohort: {format(nrow(confirmed_patients), big.mark=',')} patients (v3.15 rule: 2 HL encounters, TR-HL added, TR-NHL-only removed)"))
 
 # ==============================================================================
 # SECTION 5: COMPUTE FIRST HL DIAGNOSIS DATE (CREF-03)
@@ -201,12 +227,29 @@ for (i in seq_len(nrow(source_dist))) {
 # SECTION 6: SAVE CONFIRMED HL COHORT RDS (D-10)
 # ==============================================================================
 
-# Inner join confirmed_patients with first_dx to get only confirmed patients with their dates
+# Left join from confirmed_patients: TR-HL-only patients (no DIAGNOSIS rows) stay in the
+# cohort with first_hl_dx_date from TUMOR_REGISTRY, or NA if none (D-212-08).
 confirmed_hl_cohort <- confirmed_patients %>%
-  inner_join(first_dx, by = "ID") %>%
+  left_join(first_dx, by = "ID") %>%
   select(ID, first_hl_dx_date, first_hl_dx_source)
+src_tab_212 <- table(confirmed_hl_cohort$first_hl_dx_source, useNA = "ifany")
+message(glue("  first_hl_dx_source: {paste(names(src_tab_212), src_tab_212, sep = '=', collapse = '; ')}"))
+message(glue("  Cohort patients with NA first_hl_dx_date: {sum(is.na(confirmed_hl_cohort$first_hl_dx_date))}"))
 
-saveRDS(confirmed_hl_cohort, OUTPUT_RDS)
+# Backup the existing rds before overwrite (Phase 212 plan 04); stop if the copy fails.
+if (file.exists(OUTPUT_RDS)) {
+  bk_dir <- file.path(CONFIG$output_dir, "internal", "pre_v315_backup")
+  dir.create(bk_dir, recursive = TRUE, showWarnings = FALSE)
+  bk_path <- file.path(bk_dir, glue("confirmed_hl_cohort_pre212_{format(Sys.time(), '%Y%m%d_%H%M%S')}.rds"))
+  if (!isTRUE(file.copy(OUTPUT_RDS, bk_path)) || !file.exists(bk_path) ||
+      file.size(bk_path) != file.size(OUTPUT_RDS)) {
+    stop("[R/47] backup of confirmed_hl_cohort.rds failed; rds not overwritten: ", bk_path)
+  }
+  message(glue("  Backup written: {bk_path}"))
+}
+
+saveRDS(
+confirmed_hl_cohort, OUTPUT_RDS)
 message(glue("\nSaved confirmed HL cohort to {OUTPUT_RDS} ({nrow(confirmed_hl_cohort)} patients)"))
 
 # ==============================================================================

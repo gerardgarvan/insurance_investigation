@@ -101,3 +101,13 @@ test_that("fallback summary by site suppresses small cells", {
   expect_equal(r$rows_display[r$site == "ALL"], "<11")
   expect_equal(r$patients_display[r$site == "UFH"], "<11")
 })
+
+test_that("assign_primary_source uses R/169 first, computes the rest, labels unassigned", {
+  ssc <- dplyr::tibble(ID = c("a", "b", "z"), primary_source = c("UAB", NA, "ORL"))
+  sc <- dplyr::tibble(ID = c("b", "b", "c", "c", "c", "d"),
+                      SOURCE = c("orl", "UFH", "uml", "FLM", " ", ""),
+                      n_enc_at_source = c(3L, 3L, 2L, 2L, 9L, 4L))
+  r <- assign_primary_source(c("a", "b", "c", "d", "e"), ssc, sc)
+  expect_equal(r$site, c("UAB", "ORL", "FLM", "unassigned", "unassigned"))
+  expect_equal(r$origin, c("r169", "computed", "computed", "unassigned", "unassigned"))
+})

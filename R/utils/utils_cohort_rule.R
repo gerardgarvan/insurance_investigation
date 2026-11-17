@@ -160,3 +160,43 @@ fallback_summary_by_site <- function(fallback_rows, site_map) {
   dplyr::bind_rows(all_row, by_site) |>
     dplyr::mutate(rows_display = fmt_sup(n_rows), patients_display = fmt_sup(n_patients))
 }
+
+#' Site attribution by R/169 primary_source (D-212-06). DEMOGRAPHIC SOURCE is not used
+#' because it includes 'LNK' (linked multi-site records), which is not a site.
+#' Patients with an R/169 row and non-NA primary_source keep it. Others get the R/169
+#' logic (R/169_single_source_care.R build_single_source_result): most common non-blank
+#' encounter SOURCE (upper-cased, trimmed), alphabetical tiebreak. Patients with no
+#' non-blank encounter SOURCE are labelled "unassigned".
+#' @param ids character vector of patient IDs.
+#' @param ssc data frame with ID, primary_source (R/169 output).
+#' @param source_counts data frame with ID, SOURCE, n_enc_at_source (any case/blank allowed).
+#' @return tibble(ID, site, origin) with origin in r169 / computed / unassigned.
+assign_primary_source <- function(ids, ssc, source_counts) {
+  stopifnot(all(c("ID", "primary_source") %in% names(ssc)),
+            all(c("ID", "SOURCE", "n_enc_at_source") %in% names(source_counts)))
+  ids <- unique(as.character(ids))
+  r169 <- dplyr::tibble(ID = as.character(ssc$ID),
+                        site = as.character(ssc$primary_source)) |>
+    dplyr::filter(!is.na(site), nzchar(trimws(site))) |>
+    dplyr::distinct(ID, .keep_all = TRUE)
+  comp <- dplyr::tibble(ID = as.character(source_counts$ID),
+                        SOURCE = toupper(trimws(as.character(source_counts$SOURCE))),
+                        n = as.numeric(source_counts$n_enc_at_source)) |>
+    dplyr::filter(!is.na(SOURCE), nzchar(SOURCE)) |>
+    dplyr::group_by(ID, SOURCE) |>
+    dplyr::summarise(n = sum(n), .groups = "drop") |>
+    dplyr::group_by(ID) |>
+    dplyr::arrange(dplyr::desc(n), SOURCE, .by_group = TRUE) |>
+    dplyr::slice_head(n = 1) |>
+    dplyr::ungroup() |>
+    dplyr::transmute(ID, site = SOURCE)
+  out <- dplyr::tibble(ID = ids)
+  out$site <- r169$site[match(ids, r169$ID)]
+  out$origin <- ifelse(is.na(out$site), NA_character_, "r169")
+  need <- is.na(out$site)
+  out$site[need] <- comp$site[match(ids[need], comp$ID)]
+  out$origin[need & !is.na(out$site)] <- "computed"
+  out$origin[is.na(out$site)] <- "unassigned"
+  out$site[is.na(out$site)] <- "unassigned"
+  out
+}
