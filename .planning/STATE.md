@@ -24,7 +24,9 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 ## v3.15 Status (2026-11-17)
 
-Milestone v3.15 started; roadmap phases 210-213 created. Not started.
+Milestone v3.15 started; roadmap phases 210-213 created.
+
+Phase 210: plans 01-03 complete (commits dcfe93a, 9a7d1d4, 8b4c794). Plan 04 INCOMPLETE: PENDING HIPERGATOR (steps in 210-04-SUMMARY.md). Phase 210 not closed; Phase 211 depends on the timestamped pre210 backup.
 
 ### Open Questions (do not decide)
 
