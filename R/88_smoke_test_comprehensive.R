@@ -8548,6 +8548,12 @@ check("R/tools/213_chain_checks.R exists (Phase 213)", file.exists("R/tools/213_
 p213_ssc_all <- c(p213_ssc(p213_208), p213_ssc(p213_212))
 check("R/208 and R/212 SSC defaults name one single_source_care file (Phase 213)",
       length(unique(p213_ssc_all)) == 1L)
+p213_52  <- p213_rd("R/52_gantt_v2_export.R")
+p213_142 <- p213_rd("R/142_gantt_180_export.R")
+check("R/52 and R/142 call filter_gantt_to_cohort before writing (Phase 213 cohort-only Gantt)",
+      grepl("filter_gantt_to_cohort(", p213_52, fixed = TRUE) && grepl("filter_gantt_to_cohort(", p213_142, fixed = TRUE))
+check("R/tools/213_chain_checks.R defines chk_gantt_cohort_only (Phase 213)",
+      grepl("chk_gantt_cohort_only <- function", p213_rd("R/tools/213_chain_checks.R"), fixed = TRUE))
 
 # ==============================================================================
 # SECTION 16: SUMMARY ----

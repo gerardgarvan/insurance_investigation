@@ -55,3 +55,21 @@ chk_cohort_covered <- function(label, ids, cohort_path = file.path("output", "co
   message("[213] ", label, ": distinct IDs ", .fmt_n(length(unique(ids))), "; cohort IDs ", .fmt_n(length(coh)))
   chk_expect(paste0(label, ": cohort IDs missing"), 0L, n_missing)
 }
+
+# Cohort-only Gantt file (user decision 2026-11-17): every patient_id is in the cohort and
+# distinct patients equal the HL Diagnosis patient count (cohort size). Counts only.
+chk_gantt_cohort_only <- function(path, cohort_path = file.path("output", "confirmed_hl_cohort.rds"),
+                                  expected = CHAIN_EXPECTED_COHORT) {
+  if (!file.exists(path)) stop("[213] missing: ", path)
+  d <- utils::read.csv(path, colClasses = "character", na.strings = "",
+                       check.names = FALSE, stringsAsFactors = FALSE)
+  if (!all(c("patient_id", "treatment_type") %in% names(d))) stop("[213] gantt lacks patient_id / treatment_type")
+  coh <- unique(as.character(readRDS(cohort_path)$ID))
+  pts <- unique(d$patient_id)
+  hl  <- unique(d$patient_id[!is.na(d$treatment_type) & d$treatment_type == "HL Diagnosis"])
+  message("[213] ", basename(path), ": ", .fmt_n(nrow(d)), " rows; ", .fmt_n(length(pts)), " distinct patients")
+  a <- chk_expect("patients not in cohort", 0L, sum(!pts %in% coh))
+  b <- chk_expect("distinct patients == HL Diagnosis patients", length(hl), length(pts))
+  c <- chk_expect("distinct patients == expected cohort", expected, length(pts))
+  invisible(a && b && c)
+}

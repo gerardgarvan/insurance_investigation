@@ -200,3 +200,57 @@ assign_primary_source <- function(ids, ssc, source_counts) {
   out$site[is.na(out$site)] <- "unassigned"
   out
 }
+
+
+#' Restrict Gantt episode and detail tables to confirmed-cohort patients (Phase 213).
+#'
+#' Removes rows (including Death rows) whose patient_id is not in cohort_ids.
+#' Prints counts only (rows and patients removed), split by reason:
+#' TR-NHL-only excluded by COHORT-03 vs other non-cohort. Counts 1-10 print as "<11".
+#' Patient IDs are never printed.
+#'
+#' @param episodes,detail Data frames with a patient_id column.
+#' @param cohort_ids Character vector of confirmed-cohort IDs.
+#' @param nhl_only_ids Character vector of TR-NHL-only IDs (tr_nhl_dx TRUE, tr_hl_dx not TRUE),
+#'   or NULL when the split is unavailable (reported as not available).
+#' @param label Script label for messages.
+#' @return list(episodes, detail)
+filter_gantt_to_cohort <- function(episodes, detail, cohort_ids, nhl_only_ids = NULL, label = "gantt") {
+  sup <- function(n) if (is.na(n)) "NA" else if (n >= 1L && n <= 10L) "<11" else format(n, big.mark = ",")
+  cohort_ids <- unique(as.character(cohort_ids))
+  ep_out  <- !as.character(episodes$patient_id) %in% cohort_ids
+  det_out <- !as.character(detail$patient_id) %in% cohort_ids
+  out_ids <- unique(c(as.character(episodes$patient_id[ep_out]),
+                      as.character(detail$patient_id[det_out])))
+  if (is.null(nhl_only_ids)) {
+    n_nhl <- NA_integer_
+  } else {
+    n_nhl <- sum(out_ids %in% as.character(nhl_only_ids))
+  }
+  n_other <- if (is.na(n_nhl)) NA_integer_ else length(out_ids) - n_nhl
+  message(sprintf("[%s] cohort-only filter (confirmed_hl_cohort.rds): episode rows removed %s, detail rows removed %s",
+                  label, sup(sum(ep_out)), sup(sum(det_out))))
+  message(sprintf("[%s]   patients removed %s: TR-NHL-only excluded by COHORT-03 %s; other non-cohort %s",
+                  label, sup(length(out_ids)), sup(n_nhl), sup(n_other)))
+  episodes <- episodes[!ep_out, , drop = FALSE]
+  detail   <- detail[!det_out, , drop = FALSE]
+  hl_pts <- unique(as.character(episodes$patient_id[episodes$treatment_type %in% "HL Diagnosis"]))
+  ep_pts <- unique(as.character(episodes$patient_id))
+  stopifnot(
+    "episode patients not all in cohort" = all(ep_pts %in% cohort_ids),
+    "detail patients not all in cohort"  = all(unique(as.character(detail$patient_id)) %in% cohort_ids),
+    "distinct episode patients != HL Diagnosis patients" = length(ep_pts) == length(hl_pts) && setequal(ep_pts, hl_pts)
+  )
+  message(sprintf("[%s]   episodes %s rows, %s patients; detail %s rows; HL Diagnosis patients %s (equal)",
+                  label, sup(nrow(episodes)), sup(length(ep_pts)), sup(nrow(detail)), sup(length(hl_pts))))
+  list(episodes = episodes, detail = detail)
+}
+
+#' TR-NHL-only IDs among `ids` (tr_nhl_dx TRUE and tr_hl_dx not TRUE); NULL if TR unavailable.
+tr_nhl_only_among <- function(ids) {
+  ids <- unique(as.character(ids))
+  if (length(ids) == 0L) return(character(0))
+  trf <- tryCatch(build_tr_lymphoma_flags(ids), error = function(e) NULL)
+  if (is.null(trf)) return(NULL)
+  as.character(trf$patient_id[trf$tr_nhl_dx %in% TRUE & !(trf$tr_hl_dx %in% TRUE)])
+}

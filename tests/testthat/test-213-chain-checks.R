@@ -28,3 +28,33 @@ test_that("chk_cohort_covered passes on superset, fails on missing cohort IDs", 
   expect_true(suppressMessages(e$chk_cohort_covered("t", paste0("p", 1:25), f)))
   expect_false(suppressMessages(e$chk_cohort_covered("t", paste0("p", 1:19), f)))
 })
+test_that("chk_gantt_cohort_only flags non-cohort patients", {
+  src <- file.path(testthat::test_path("..", ".."), "R", "tools", "213_chain_checks.R")
+  skip_if_not(file.exists(src))
+  e <- new.env(); sys.source(src, envir = e)
+  rds <- tempfile(fileext = ".rds"); saveRDS(data.frame(ID = paste0("p", 1:12)), rds)
+  f <- tempfile(fileext = ".csv")
+  d <- data.frame(patient_id = c(paste0("p", 1:12), "p1"),
+                  treatment_type = c(rep("HL Diagnosis", 12), "Chemotherapy"))
+  utils::write.csv(d, f, row.names = FALSE)
+  expect_true(suppressMessages(e$chk_gantt_cohort_only(f, rds, expected = 12L)))
+  d2 <- rbind(d, data.frame(patient_id = "x9", treatment_type = "Chemotherapy"))
+  utils::write.csv(d2, f, row.names = FALSE)
+  expect_false(suppressMessages(e$chk_gantt_cohort_only(f, rds, expected = 12L)))
+})
+test_that("filter_gantt_to_cohort drops non-cohort rows and enforces HL parity", {
+  src <- file.path(testthat::test_path("..", ".."), "R", "utils", "utils_cohort_rule.R")
+  skip_if_not(file.exists(src))
+  e <- new.env(); sys.source(src, envir = e)
+  ids <- paste0("p", 1:12)
+  ep <- data.frame(patient_id = c(ids, "z1", "z2"),
+                   treatment_type = c(rep("HL Diagnosis", 12), "Chemotherapy", "Death"))
+  det <- data.frame(patient_id = c(ids, "z2"), x = 1)
+  r <- suppressMessages(e$filter_gantt_to_cohort(ep, det, ids, nhl_only_ids = "z1"))
+  expect_equal(nrow(r$episodes), 12L)
+  expect_equal(nrow(r$detail), 12L)
+  expect_message(e$filter_gantt_to_cohort(ep, det, ids, nhl_only_ids = "z1"), "<11")
+  ep_bad <- rbind(ep[ep$patient_id != "p3" | ep$treatment_type != "HL Diagnosis", ],
+                   data.frame(patient_id = "p3", treatment_type = "Chemotherapy"))
+  expect_error(suppressMessages(e$filter_gantt_to_cohort(ep_bad, det, ids)))
+})

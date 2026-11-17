@@ -390,7 +390,7 @@ death_only_investigation <- death_only_with_hl %>%
     hl_diagnosis_codes = if_else(is.na(hl_diagnosis_codes), 0L, hl_diagnosis_codes),
     care_gap_category = case_when(
       !confirmed_hl & hl_diagnosis_codes == 0 ~ "No HL diagnosis codes in data",
-      !confirmed_hl & hl_diagnosis_codes > 0 ~ "Has HL codes but not confirmed (< 2 codes or < 7 days)",
+      !confirmed_hl & hl_diagnosis_codes > 0 ~ "Has HL codes but not confirmed (does not meet the v3.15 cohort rule)",
       confirmed_hl & died_before_first_hl_dx ~ "Confirmed HL but died before first HL diagnosis date",
       confirmed_hl & total_encounters == 0 ~ "Confirmed HL, no encounter records",
       confirmed_hl & total_encounters > 0 ~ "Confirmed HL with encounters but no treatment records",

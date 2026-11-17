@@ -42,3 +42,9 @@ Later (analysis tables not in the v3.15 deliverable chain; rerun at the next del
 - RUN_DATE for R/169 and the R/208/R/212 pin is 20261117 (date of this run; differs from 20261008). If the HiPerGator run uses another date, set `R208_SSC_RDS` / `R212_SSC_RDS` or re-edit the pins.
 - R/47 pre212 backup: R/212 pins `confirmed_hl_cohort_pre212_20261117_133152.rds` by exact path (no glob). R/47 itself only writes a new timestamped backup when rerun; it is not in the chain, so no second backup appears. 
 - R/206 direct-mode supportive-only check is narrowed to own-drug evidence (pooled concurrency extras cannot be rederived from drug_names); see `R/utils/utils_206_direct.R`.
+
+## USER DECISION 2026-11-17: Gantt deliverables are cohort-only
+- gantt_episodes.csv, gantt_detail.csv (R/52) and gantt_episodes_180.csv, gantt_detail_180.csv (R/142) contain ONLY confirmed_hl_cohort.rds patients (9,179). Episodes, detail and Death rows are filtered before writing.
+- Trigger: plan 03 R/52 run had 9,307 distinct patients vs 9,179 HL Diagnosis rows.
+- Implementation: `filter_gantt_to_cohort()` (utils_cohort_rule.R); check `chk_gantt_cohort_only()`. Supersedes the D-201-04 note for the Gantt files only; D-201-04 logic itself is unchanged.
+

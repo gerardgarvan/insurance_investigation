@@ -1233,6 +1233,19 @@ if (!identical(colnames(detail_export), DETAIL_SCHEMA)) {
 message(glue("  Schema verification: PASSED ({length(EPISODES_SCHEMA)} episode cols, {length(DETAIL_SCHEMA)} detail cols)"))
 
 
+# --- SECTION 4Z: COHORT-ONLY FILTER (Phase 213, user decision 2026-11-17) ---
+# Deliverables contain only confirmed-cohort patients (confirmed_hl_cohort.rds).
+stopifnot("confirmed_hl_cohort.rds required for cohort-only Gantt" = file.exists(COHORT_RDS))
+{
+  .coh_ids <- as.character(readRDS(COHORT_RDS)$ID)
+  .out_ids <- setdiff(unique(c(as.character(episodes_export$patient_id), as.character(detail_export$patient_id))), .coh_ids)
+  .flt <- filter_gantt_to_cohort(episodes_export, detail_export, .coh_ids,
+                                 nhl_only_ids = tr_nhl_only_among(.out_ids), label = "R/142")
+  episodes_export <- .flt$episodes
+  detail_export <- .flt$detail
+  rm(.flt, .coh_ids, .out_ids)
+}
+
 # --- SECTION 5: WRITE CSV OUTPUTS ----
 
 message("\n--- Writing 180-day CSV outputs ---")
