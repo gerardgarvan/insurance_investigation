@@ -20,3 +20,11 @@ test_that("chk_gantt_hl counts HL Diagnosis rows", {
   expect_true(suppressMessages(e$chk_gantt_hl(f, expected = 12L)))
   expect_false(suppressMessages(e$chk_gantt_hl(f, expected = 13L)))
 })
+test_that("chk_cohort_covered passes on superset, fails on missing cohort IDs", {
+  src <- file.path(testthat::test_path("..", ".."), "R", "tools", "213_chain_checks.R")
+  skip_if_not(file.exists(src))
+  e <- new.env(); sys.source(src, envir = e)
+  f <- tempfile(fileext = ".rds"); saveRDS(data.frame(ID = paste0("p", 1:20)), f)
+  expect_true(suppressMessages(e$chk_cohort_covered("t", paste0("p", 1:25), f)))
+  expect_false(suppressMessages(e$chk_cohort_covered("t", paste0("p", 1:19), f)))
+})

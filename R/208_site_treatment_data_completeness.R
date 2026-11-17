@@ -22,12 +22,12 @@
 # PROCEDURES: PX, PX_TYPE, PX_DATE; PRESCRIBING: RX_ORDER_DATE; MED_ADMIN:
 # MEDADMIN_START_DATE; DISPENSING: DISPENSE_DATE; DIAGNOSIS: DX, DX_DATE; every
 # table SOURCE), .planning/schemas/203_schema_inputs_20261114.md (confirmed cohort,
-# single_source_care_20261008.rds: ID, primary_source). Checked at run time; the
+# single_source_care_20261117.rds: ID, primary_source). Checked at run time; the
 # 261114-uzz SUMMARY requests a probe of the CDM tables.
 #
 # Pinned inputs (env var, dated default; KEY records pinned TRUE/FALSE):
 #   R208_COHORT_RDS  output/confirmed_hl_cohort.rds
-#   R208_SSC_RDS     output/internal/single_source_care_20261008.rds   (NOT *_parts_*)
+#   R208_SSC_RDS     output/internal/single_source_care_20261117.rds   (NOT *_parts_*)
 #   R208_203_RDS     newest output/internal/203_no_treatment_characterization_<YYYYMMDD>[_vN].rds
 #                    by FILE NAME (user-specified "newest"; never file.mtime). Set the
 #                    env var to pin; the chosen file is printed and recorded in KEY.
@@ -99,7 +99,7 @@ pin <- function(env, default) {
 int_dir <- file.path(CONFIG$output_dir, "internal")
 dir.create(int_dir, showWarnings = FALSE, recursive = TRUE)
 p_cohort <- pin("R208_COHORT_RDS", file.path(CONFIG$output_dir, "confirmed_hl_cohort.rds"))
-p_ssc    <- pin("R208_SSC_RDS", file.path(int_dir, "single_source_care_20261008.rds"))
+p_ssc    <- pin("R208_SSC_RDS", file.path(int_dir, "single_source_care_20261117.rds"))
 p_203 <- {
   v <- Sys.getenv("R208_203_RDS", unset = "")
   if (nzchar(v)) list(path = v, pinned = TRUE) else {

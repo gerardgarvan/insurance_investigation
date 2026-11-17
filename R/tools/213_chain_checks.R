@@ -46,3 +46,12 @@ chk_ids_in_cohort <- function(label, ids, cohort_path = file.path("output", "con
   coh <- readRDS(cohort_path)$ID
   chk_expect(paste0(label, ": IDs not in cohort"), 0L, sum(!unique(as.character(ids)) %in% as.character(coh)))
 }
+
+# Coverage (not equality): every cohort ID appears in `ids`. Expected missing = 0.
+# Use where a script scopes wider than the cohort (R/169 uses get_hl_any_dx_ids()).
+chk_cohort_covered <- function(label, ids, cohort_path = file.path("output", "confirmed_hl_cohort.rds")) {
+  coh <- unique(as.character(readRDS(cohort_path)$ID))
+  n_missing <- sum(!coh %in% unique(as.character(ids)))
+  message("[213] ", label, ": distinct IDs ", .fmt_n(length(unique(ids))), "; cohort IDs ", .fmt_n(length(coh)))
+  chk_expect(paste0(label, ": cohort IDs missing"), 0L, n_missing)
+}

@@ -22,6 +22,9 @@
 #   output/gantt_episodes_180_flag_dictionary.csv          (no patient data)
 #   output/internal/gantt_episodes_180_pre_decisions_20261114.csv (copy, no overwrite)
 #   output/internal/decisions_20261114_changes.csv         (internal only)
+# Mode (Phase 213, DEC-213-01): R206_MODE = "legacy" (default, behaviour above) or
+#   "direct": verify the decision rules on output/gantt_episodes_180.csv as written by
+#   R/142 at HEAD (no BASE/P205 inputs, no EXPECTED_ROWS); writes only a pre-copy.
 # Interactive HiPerGator only: source("R/206_apply_decisions_gantt180.R",
 #   local = new.env(parent = globalenv()))
 # ==============================================================================
@@ -70,6 +73,35 @@ read_chr <- function(path) {
 }
 ep_key <- function(d) paste(d$patient_id, d$treatment_type, d$episode_start, sep = "\r")
 
+R206_MODE <- Sys.getenv("R206_MODE", "legacy")
+if (!R206_MODE %in% c("legacy", "direct")) stop("R206_MODE must be 'legacy' or 'direct'", call. = FALSE)
+message("R/206 mode: ", R206_MODE)
+
+if (identical(R206_MODE, "direct")) {
+  # ---- direct mode: verify R/142 output, write nothing but a pre-copy ---------------
+  source(here::here("R", "tools", "213_chain_checks.R"), local = FALSE)
+  if (!file.exists(LIVE_GANTT)) stop("Input missing (stop): ", LIVE_GANTT, call. = FALSE)
+  run_date <- Sys.getenv("RUN_DATE", format(Sys.Date(), "%Y%m%d"))
+  DIRECT_COPY <- here::here("output", "internal", sprintf("gantt_episodes_180_pre206_direct_%s.csv", run_date))
+  dir.create(dirname(DIRECT_COPY), recursive = TRUE, showWarnings = FALSE)
+  if (file.exists(DIRECT_COPY)) {
+    message("  pre-206 copy already exists, not overwritten: ", DIRECT_COPY)
+  } else {
+    if (!file.copy(LIVE_GANTT, DIRECT_COPY, overwrite = FALSE)) qc_fail("could not copy live file")
+    message("  wrote pre-206 copy: ", DIRECT_COPY)
+  }
+  d <- read_chr(LIVE_GANTT)
+  message("  AVD_INCLUDES_BV_NIVO = ", AVD_INCLUDES_BV_NIVO)
+  res <- direct_mode_checks(d, SCHEMA_34, expected_hl = CHAIN_EXPECTED_COHORT)
+  for (nm in names(res)) chk_expect(paste0("R/206 direct: ", nm), 1L, as.integer(res[[nm]]))
+  message("  rows: ", fmt_sup(nrow(d)), "; patients: ", fmt_sup(length(unique(d$patient_id))),
+          "; abvd_episode episodes: ", fmt_sup(sum(d$abvd_episode == "TRUE")),
+          "; avd_episode episodes: ", fmt_sup(sum(d$avd_episode == "TRUE")))
+  if (!all(unlist(res))) qc_fail("direct-mode checks failed: ", paste(names(res)[!unlist(res)], collapse = ", "))
+  qc_ok("direct mode: all checks pass; gantt_episodes_180.csv unchanged")
+  message("R/206 done (direct)")
+}
+if (!identical(R206_MODE, "direct")) {
 message("R/206: apply 2026-11-14 decisions to gantt_episodes_180.csv")
 for (p in c(BASE_GANTT, P205_GANTT, LIVE_GANTT)) {
   if (!file.exists(p)) stop("Input missing (stop): ", p, call. = FALSE)
@@ -222,3 +254,4 @@ DICT_CSV <- here::here("output", "gantt_episodes_180_flag_dictionary.csv")
 utils::write.csv(dict, DICT_CSV, row.names = FALSE, na = "")
 message("  wrote ", DICT_CSV, " (", nrow(dict), " rows)")
 message("R/206 done")
+}  # end legacy mode

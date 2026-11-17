@@ -56,7 +56,7 @@ pin_input <- function(env_var, default_rel) {
   list(path = p, pinned = nzchar(v))
 }
 pin_old <- pin_input("R212_COHORT_RDS", file.path("output", "internal", "pre_v315_backup", "confirmed_hl_cohort_pre212_20261117_133152.rds"))
-pin_ssc <- pin_input("R212_SSC_RDS", file.path("output", "internal", "single_source_care_20261008.rds"))
+pin_ssc <- pin_input("R212_SSC_RDS", file.path("output", "internal", "single_source_care_20261117.rds"))
 ssc <- readRDS(pin_ssc$path)
 if (!all(c("ID", "primary_source") %in% names(ssc))) stop("[R212] R/169 rds lacks ID / primary_source")
 old_cohort <- readRDS(pin_old$path)

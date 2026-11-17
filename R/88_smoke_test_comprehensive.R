@@ -8520,6 +8520,36 @@ message(glue("\nSMOKE-207-01: {p207_pass} PASS / {p207_fail} FAIL / {p207_skip} 
 
 
 # ==============================================================================
+# Phase 213 (CHAIN-02): v3.15 cohort-rule / chain-rerun static checks ----
+# Existing checks that grep R/49, R/52, R/32 and R/44 text for the 7-day columns are
+# unchanged: those scripts are not edited in v3.15, so the assertions still hold.
+# ==============================================================================
+message("
+[Phase 213] v3.15 cohort rule and chain-rerun checks...")
+p213_rd <- function(f) if (file.exists(f)) paste(readLines(f, warn = FALSE), collapse = "
+") else ""
+p213_47  <- p213_rd("R/47_cancer_summary_refined.R")
+p213_212 <- p213_rd("R/212_cohort_rule_waterfall.R")
+p213_206 <- p213_rd("R/206_apply_decisions_gantt180.R")
+p213_208 <- p213_rd("R/208_site_treatment_data_completeness.R")
+p213_ssc <- function(txt) unique(regmatches(txt, gregexpr("single_source_care_[0-9]{8}[.]rds", txt))[[1]])
+
+check("R/47 applies the v3.15 cohort rule via apply_cohort_rule_v315 (Phase 213)",
+      grepl("apply_cohort_rule_v315", p213_47, fixed = TRUE))
+check("R/47 saves the cohort with 3 columns ID, first_hl_dx_date, first_hl_dx_source (Phase 213)",
+      grepl("select(ID, first_hl_dx_date, first_hl_dx_source)", p213_47, fixed = TRUE))
+check("R/212 default R212_COHORT_RDS pins confirmed_hl_cohort_pre212_20261117_133152.rds (Phase 213)",
+      grepl("R212_COHORT_RDS", p213_212, fixed = TRUE) &&
+        grepl("confirmed_hl_cohort_pre212_20261117_133152.rds", p213_212, fixed = TRUE))
+check("R/206 has R206_MODE with legacy and direct modes (Phase 213)",
+      grepl("R206_MODE", p213_206, fixed = TRUE) && grepl("\"direct\"", p213_206, fixed = TRUE) &&
+        grepl("\"legacy\"", p213_206, fixed = TRUE))
+check("R/tools/213_chain_checks.R exists (Phase 213)", file.exists("R/tools/213_chain_checks.R"))
+p213_ssc_all <- c(p213_ssc(p213_208), p213_ssc(p213_212))
+check("R/208 and R/212 SSC defaults name one single_source_care file (Phase 213)",
+      length(unique(p213_ssc_all)) == 1L)
+
+# ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
 

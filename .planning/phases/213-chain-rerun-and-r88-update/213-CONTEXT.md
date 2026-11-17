@@ -17,6 +17,7 @@ Out of scope: cohort membership, the 212 rule, D-201-04, treatment capture.
 
 ## Decisions (headless defaults; flagged for review)
 - DEC-213-01 (R/206 on new cohort): default = "direct" mode. Rerun R/142 at HEAD on the new cohort, then R/206 in `R206_MODE=direct` verifies the decision rules on that file instead of joining to old files. Rerunning the p205 candidate chain is NOT used (more runs, old-cohort-only reconciliation inputs). Consequence to review: R/142 at HEAD ships Phase 205 regimen labels for all rows, not only ABVD_PLUS rows. This is the open "ship 205 over delivered?" decision (deferred to 2026-12-07). Plan 04 adds a label-diff step (delivered backup vs new, old-cohort patients only) so the size of that change is known before sign-off. Delivered file stays rollback-able from the backup.
+- **DEC-213-01 DECIDED (Gerard, 2026-11-17):** ship Phase 205 regimen labels for all rows (accept R/142 at HEAD + `R206_MODE=direct`). Resolves the deferred "ship 205 over delivered" item (STATE.md open decisions). Plan-04 label diff vs the delivered file is still run, for documentation, not as a gate; the Review gate in plan 04 is satisfied by this decision.
 - DEC-213-02: R/26 and R/28 are run (user order) but expected unchanged; the plan gates on that.
 - DEC-213-03: R/169 gets a new dated output. R/208 default pin is edited to that file name after the run; the old pin stays in the backup list.
 - DEC-213-04: R/88 edits are limited to cohort-rule wording checks and new 213 checks. The 9 pre-v3.14 baseline failures must stay exactly 9 and the same 9.
@@ -37,3 +38,7 @@ Later (analysis tables not in the v3.15 deliverable chain; rerun at the next del
 - Planner/checker agents not spawned; plans hand-checked against the three success criteria.
 - Script scoping for R/26 (no cohort filter) is from grep only; plan 02 Task 0 confirms with the count comparison.
 - Backup list and output names beyond those cited are discovered by globbing on HiPerGator, not assumed (plan 01 prints them).
+- R/169 scope (user adjustment 2026-11-17): R/169 scopes via `get_hl_any_dx_ids()`, so distinct IDs may be 9,331 not 9,179. Check coverage (every one of the 9,179 cohort IDs present; `chk_cohort_covered`), not equality; stop only if cohort IDs are missing.
+- RUN_DATE for R/169 and the R/208/R/212 pin is 20261117 (date of this run; differs from 20261008). If the HiPerGator run uses another date, set `R208_SSC_RDS` / `R212_SSC_RDS` or re-edit the pins.
+- R/47 pre212 backup: R/212 pins `confirmed_hl_cohort_pre212_20261117_133152.rds` by exact path (no glob). R/47 itself only writes a new timestamped backup when rerun; it is not in the chain, so no second backup appears. 
+- R/206 direct-mode supportive-only check is narrowed to own-drug evidence (pooled concurrency extras cannot be rederived from drug_names); see `R/utils/utils_206_direct.R`.
