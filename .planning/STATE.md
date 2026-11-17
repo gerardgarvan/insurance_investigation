@@ -20,13 +20,13 @@ See: .planning/PROJECT.md (updated 2026-10-27, v3.13 started)
 
 **Core value:** A working cohort filter chain that reads like a clinical protocol — with logged attrition at every step and clear payer-stratified visualizations showing how patients flow from enrollment through diagnosis to treatment.
 
-**Current focus:** v3.15 Phase 210 — ABVD/AVD episode and patient flags (v3.14 Phase 205 candidate still unshipped)
+**Current focus:** v3.15 Phase 211 — ABVD impact table (planned; v3.14 Phase 205 candidate still unshipped)
 
 ## v3.15 Status (2026-11-17)
 
 Milestone v3.15 started; roadmap phases 210-213 created.
 
-Phase 210: plans 01-03 complete (commits dcfe93a, 9a7d1d4, 8b4c794). Plan 04 INCOMPLETE: PENDING HIPERGATOR (steps in 210-04-SUMMARY.md). Phase 210 not closed; Phase 211 depends on the timestamped pre210 backup.
+Phase 210: COMPLETE 2026-11-17 (plans 01-04; commits dcfe93a, 9a7d1d4, 8b4c794 + docs). HiPerGator run OK: 34 cols, 22,548 rows, abvd_episode 1,254, avd_episode 570, ever_abvd 1,169, ever_avd 520, both 51. Backup `output/internal/gantt_episodes_180_pre210_20261117_120409.csv`.
 
 ### Open Questions (do not decide)
 
