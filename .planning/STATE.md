@@ -124,6 +124,7 @@ Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_
 
 ### Roadmap Evolution
 
+- Phase 214 added (v3.15): Chemo combination change audit, old vs new Gantt (2026-11-19). CONTEXT + 2 PLANs written; reference CSVs missing locally (A-214-02); plan 02 PENDING HIPERGATOR.
 - Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
 - Phase 192.2 inserted after Phase 192.1: ICD-9 autoimmune codes in Gantt episodes (URGENT)
 - Phase 192.3 inserted after Phase 192.2: Distance >100 mi vs CBC stratified by SOURCE (Medicare reassigned to address source) (URGENT)

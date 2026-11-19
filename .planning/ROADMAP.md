@@ -1204,6 +1204,20 @@ Plans:
 - [x] 213-04-PLAN.md - R/142, R/206 direct mode, label diff, PENDING HIPERGATOR (wave 4)
 - [x] 213-05-PLAN.md - R/88 update, R/203 -> R/208, stale list, PENDING HIPERGATOR (wave 5)
 
+### Phase 214: Chemo Combination Change Audit (old vs new Gantt)
+**Goal**: Every change in the set of distinct chemo drug_names combinations between the old combination list (498 rows) and the new Gantt (504 rows + blank) accounted for, with a confirmed cause per new combination.
+**Depends on**: Phase 213
+**Requirements**: COMBO-01, COMBO-02, COMBO-03, COMBO-04, COMBO-05, COMBO-06, COMBO-07
+**Success Criteria**:
+  1. Combos classified unchanged/label_only/new/dropped (expected 314/161/29/21; differences reported in QC)
+  2. Old snapshot that reproduces chemo_combo_check.csv identified, or script stops with a clear message
+  3. Cause (a)-(g) attributed per affected episode and rolled up per combination
+  4. Workbook in output/internal/ (KEY leftmost); registered in R/39, R/88, SCRIPT_INDEX; tests pass locally
+**Plans**: 2 plans
+Plans:
+- [ ] 214-01-PLAN.md - helpers, R/214 script, testthat fixtures, registration (local)
+- [ ] 214-02-PLAN.md - HiPerGator run and review, PENDING HIPERGATOR
+
 ## Progress Table (v3.15)
 
 | Phase | Plans Complete | Status | Completed |
@@ -1212,3 +1226,4 @@ Plans:
 | 211. ABVD Impact Table | 4/4 | Complete | 2026-11-17 |
 | 212. Cohort Rule Change | 5/5 | Complete | 2026-11-17 |
 | 213. Chain Rerun + R/88 | 5/5 | Complete | 2026-11-17 |
+| 214. Combo Change Audit | 0/2 | Planned | - |
