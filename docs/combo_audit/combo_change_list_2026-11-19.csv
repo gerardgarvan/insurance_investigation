@@ -1,0 +1,526 @@
+status,combination_normalized,old_file_string,new_file_string,related_combination,hypothesized_cause_UNCONFIRMED
+new,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Rituximab,,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Rituximab,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Bendamustine;Cyclophosphamide;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,,Bendamustine;Cyclophosphamide;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Bendamustine;Nivolumab,,Bendamustine;Nivolumab,,"Contains Nivolumab, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Bendamustine;Obinutuzumab;Rituximab,,Bendamustine;Obinutuzumab;Rituximab,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Bevacizumab;Methotrexate;Procarbazine;Rituximab,,Bevacizumab;Methotrexate;Procarbazine;Rituximab,Bevacizumab;Methotrexate;Procarbazine,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Brentuximab Vedotin,,Brentuximab Vedotin,,"Contains Brentuximab Vedotin, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Brentuximab Vedotin;Cisplatin;Etoposide,,Brentuximab Vedotin;Cisplatin;Etoposide,,"Contains Brentuximab Vedotin, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Brentuximab Vedotin;Cyclophosphamide;Vincristine Sulfate,,Brentuximab Vedotin;Cyclophosphamide;Vincristine Sulfate,,"Contains Brentuximab Vedotin, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Brentuximab Vedotin;Etoposide,,Brentuximab Vedotin;Etoposide,,"Contains Brentuximab Vedotin, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Brentuximab Vedotin;Etoposide;Rituximab,,Brentuximab Vedotin;Etoposide;Rituximab,,"Contains Brentuximab Vedotin, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Rituximab;Vincristine Sulfate,,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Rituximab;Vincristine Sulfate,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Carboplatin;Methotrexate;Rituximab,,Carboplatin;Methotrexate;Rituximab,Carboplatin;Methotrexate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Carmustine;Methotrexate;Rituximab,,Carmustine;Methotrexate;Rituximab,Carmustine;Methotrexate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Cisplatin;Cyclophosphamide;Rituximab,,Cisplatin;Cyclophosphamide;Rituximab,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Cisplatin;Gemcitabine;Methotrexate;Rituximab,,Cisplatin;Gemcitabine;Methotrexate;Rituximab,Cisplatin;Gemcitabine;Methotrexate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Cladribine;Rituximab,,Cladribine;Rituximab,Cladribine,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate;Rituximab,,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate;Rituximab,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Rituximab,,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Rituximab,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Rituximab;Vincristine Sulfate,,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Rituximab;Vincristine Sulfate,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Cyclophosphamide;Doxorubicin;Etoposide;Pembrolizumab;Vincristine Sulfate,,Cyclophosphamide;Doxorubicin;Etoposide;Pembrolizumab;Vincristine Sulfate,,"Contains Pembrolizumab, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Rituximab;Vincristine Sulfate,,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Rituximab;Vincristine Sulfate,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Vincristine Sulfate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Cytarabine;Doxorubicin;Methotrexate,,Cytarabine;Doxorubicin;Methotrexate,,No obvious cause: check cohort rule change and episode boundaries
+new,Cytarabine;Procarbazine;Rituximab,,Cytarabine;Procarbazine;Rituximab,Cytarabine;Procarbazine,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Dacarbazine;Doxorubicin;Etoposide;Rituximab,,Dacarbazine;Doxorubicin;Etoposide;Rituximab,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Doxorubicin;Methotrexate;Rituximab,,Doxorubicin;Methotrexate;Rituximab,,"Contains Rituximab, no single old counterpart: possibly Rituximab capture fix; confirm"
+new,Doxorubicin;Pegaspargase,,Doxorubicin;Pegaspargase,,No obvious cause: check cohort rule change and episode boundaries
+new,Fludarabine Phosphate;Rituximab,,Fludarabine Phosphate;Rituximab,Fludarabine Phosphate,Old combination plus Rituximab: likely Rituximab capture fix (Phase 200) / all-indication decision
+new,Nivolumab,,Nivolumab,,"Contains Nivolumab, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+new,Pembrolizumab,,Pembrolizumab,,"Contains Pembrolizumab, absent from the old list entirely: likely immunotherapy capture fix (Phase 200)"
+dropped,Antineoplastic Drugs;Fluorouracil;Mitomycin;Not Otherwise Classified;Obinutuzumab,Antineoplastic Drugs;Fluorouracil;Mitomycin;Not Otherwise Classified;Obinutuzumab,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,,Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Bendamustine;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,,Bendamustine;Cyclophosphamide;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,Likely moved to the same combination plus Rituximab
+dropped,Bendamustine;Polatuzumab Vedotin-Piiq,Bendamustine;Polatuzumab Vedotin-Piiq,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Bevacizumab;Methotrexate;Procarbazine,Bevacizumab;Methotrexate;Procarbazine,,Bevacizumab;Methotrexate;Procarbazine;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Bleomycin;Cyclophosphamide;Etoposide;Procarbazine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Etoposide;Procarbazine;Vincristine Sulfate,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Bortezomib;Gemcitabine;Rituximab,Bortezomib;Gemcitabine;Rituximab,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin;Etoposide;Ifosfamide;Mesna;Methotrexate;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Methotrexate;Vincristine Sulfate,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Carboplatin;Methotrexate,Carboplatin;Methotrexate,,Carboplatin;Methotrexate;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Carmustine;Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Vincristine Sulfate,Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Carmustine;Cyclophosphamide;Etoposide,Carmustine;Cyclophosphamide;Etoposide,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Carmustine;Methotrexate,Carmustine;Methotrexate,,Carmustine;Methotrexate;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Cisplatin;Gemcitabine;Methotrexate,Cisplatin;Gemcitabine;Methotrexate,,Cisplatin;Gemcitabine;Methotrexate;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Cladribine,Cladribine,,Cladribine;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate,,Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Vincristine Sulfate,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Vincristine Sulfate,,Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Rituximab;Vincristine Sulfate,Likely moved to the same combination plus Rituximab
+dropped,Cyclophosphamide;Mitoxantrone;Rituximab,Cyclophosphamide;Mitoxantrone;Rituximab,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Cytarabine;Procarbazine,Cytarabine;Procarbazine,,Cytarabine;Procarbazine;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Fludarabine Phosphate,Fludarabine Phosphate,,Fludarabine Phosphate;Rituximab,Likely moved to the same combination plus Rituximab
+dropped,Obinutuzumab;Rituximab,Obinutuzumab;Rituximab,,,"No obvious cause: check cohort rule change, added drugs and episode boundaries"
+dropped,Ofatumumab;Paclitaxel;Rituximab,Ofatumumab;Paclitaxel;Rituximab,,,Ofatumumab absent from the new list entirely: check code map / cohort change
+label_only,Antineoplastic Drugs;Bleomycin;Dacarbazine;Doxorubicin;Not Otherwise Classified;Vinblastine,Antineoplastic Drugs;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Not Otherwise Classified;Vinblastine,Antineoplastic Drugs;Bleomycin;Dacarbazine;Doxorubicin;Not Otherwise Classified;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Asparaginase;Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Asparaginase;Cytarabine;Doxorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Cytarabine;Doxorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Vincristine Sulfate,Bendamustine;Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate,Bendamustine;Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin;Vinblastine,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Bendamustine;Bleomycin;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,Bendamustine;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine,Bendamustine;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Dacarbazine;Doxorubicin;Vinblastine,Bendamustine;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Bendamustine;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Doxorubicin,Bendamustine;Doxorubicin Hydrochloride,Bendamustine;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bendamustine;Doxorubicin;Rituximab,Bendamustine;Doxorubicin Hydrochloride;Rituximab,Bendamustine;Doxorubicin;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Carboplatin;Carmustine;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Carboplatin;Carmustine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Carboplatin;Carmustine;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,Bleomycin;Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate,Bleomycin;Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Mesna,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Mesna,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine,Bleomycin;Carboplatin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin;Vinblastine,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Bleomycin;Cisplatin;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Mesna;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Mesna;Procarbazine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Mesna;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Mesna;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Rituximab;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Rituximab;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Paclitaxel;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Paclitaxel;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Paclitaxel;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Rituximab;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Procarbazine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Procarbazine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Procarbazine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Procarbazine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Procarbazine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate,Bleomycin;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride,Bleomycin;Dacarbazine;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Oxaliplatin;Rituximab;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Oxaliplatin;Rituximab;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Oxaliplatin;Rituximab;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Methotrexate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Methotrexate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Procarbazine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Ifosfamide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Ifosfamide;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Ifosfamide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Oxaliplatin;Rituximab,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Oxaliplatin;Rituximab,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Oxaliplatin;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Goserelin Acetate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Goserelin Acetate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Goserelin Acetate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Leuprolide Acetate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Leuprolide Acetate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Leuprolide Acetate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Mechlorethamine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Mechlorethamine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin;Mechlorethamine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Mesna;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Mesna;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Mesna;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Methotrexate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Methotrexate;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Methotrexate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin;Procarbazine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Rituximab;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Thiotepa;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Thiotepa;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Thiotepa;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Vinblastine,Adriamycin;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine | Adriamycin;Bleomycin;Dacarbazine;Vinblastine | Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Bleomycin;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Doxorubicin,Bleomycin;Doxorubicin Hydrochloride,Bleomycin;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Doxorubicin;Etoposide;Mechlorethamine;Vinblastine;Vincristine Sulfate,Bleomycin;Doxorubicin Hydrochloride;Etoposide;Mechlorethamine;Vinblastine;Vincristine Sulfate,Bleomycin;Doxorubicin;Etoposide;Mechlorethamine;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Doxorubicin;Rituximab;Vincristine Sulfate,Bleomycin;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate,Bleomycin;Doxorubicin;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Doxorubicin;Vinblastine,Bleomycin;Doxorubicin Hydrochloride;Vinblastine,Bleomycin;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bleomycin;Doxorubicin;Vincristine Sulfate,Bleomycin;Doxorubicin Hydrochloride;Vincristine Sulfate,Bleomycin;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bortezomib;Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate,Bortezomib;Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate,Bortezomib;Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Bortezomib;Cyclophosphamide;Doxorubicin;Rituximab,Bortezomib;Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab,Bortezomib;Cyclophosphamide;Doxorubicin;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin;Etoposide;Ifosfamide;Mesna;Methotrexate;Rituximab;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Methotrexate;Rituximab;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin;Etoposide;Ifosfamide;Mesna;Methotrexate;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Oxaliplatin;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Ifosfamide;Mesna;Oxaliplatin;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Oxaliplatin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Mesna,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Mesna,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Cyclophosphamide;Doxorubicin;Paclitaxel,Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Paclitaxel,Carboplatin;Cyclophosphamide;Doxorubicin;Paclitaxel,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Mesna;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Mesna;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine,Carboplatin;Dacarbazine;Doxorubicin;Etoposide;Ifosfamide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Doxorubicin,Carboplatin;Doxorubicin Hydrochloride,Carboplatin;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Doxorubicin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,Carboplatin;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,Carboplatin;Doxorubicin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carboplatin;Doxorubicin;Etoposide;Ifosfamide,Carboplatin;Doxorubicin Hydrochloride;Etoposide;Ifosfamide,Carboplatin;Doxorubicin;Etoposide;Ifosfamide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Oxaliplatin,Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Oxaliplatin,Carmustine;Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Oxaliplatin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate,Carmustine;Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,Carmustine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine,Carmustine;Dacarbazine;Doxorubicin;Etoposide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Doxorubicin;Etoposide,Carmustine;Doxorubicin Hydrochloride;Etoposide,Carmustine;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Doxorubicin;Etoposide;Gemcitabine,Carmustine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine,Carmustine;Doxorubicin;Etoposide;Gemcitabine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Carmustine;Doxorubicin;Etoposide;Gemcitabine;Vinorelbine Tartrate,Carmustine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinorelbine Tartrate,Carmustine;Doxorubicin;Etoposide;Gemcitabine;Vinorelbine Tartrate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin;Etoposide;Mesna;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Cyclophosphamide;Doxorubicin;Rituximab;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Cytarabine;Dacarbazine;Doxorubicin;Etoposide;Rituximab,Cisplatin;Cytarabine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab,Cisplatin;Cytarabine;Dacarbazine;Doxorubicin;Etoposide;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Dacarbazine;Doxorubicin;Vinblastine,Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Cisplatin;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cisplatin;Doxorubicin,Cisplatin;Doxorubicin Hydrochloride,Cisplatin;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Cytarabine;Daunorubicin;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Rituximab;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Rituximab;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Doxorubicin;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin;Etoposide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Dacarbazine;Doxorubicin;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate,Cyclophosphamide;Dacarbazine;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin,Cyclophosphamide;Doxorubicin Hydrochloride,Cyclophosphamide;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide,Cyclophosphamide;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Romidepsin,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Romidepsin,Cyclophosphamide;Doxorubicin;Etoposide;Gemcitabine;Romidepsin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Etoposide;Ifosfamide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Etoposide;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Procarbazine,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Procarbazine,Cyclophosphamide;Doxorubicin;Etoposide;Procarbazine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Etoposide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Fluorouracil;Paclitaxel,Cyclophosphamide;Doxorubicin Hydrochloride;Fluorouracil;Paclitaxel,Cyclophosphamide;Doxorubicin;Fluorouracil;Paclitaxel,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Gemcitabine;Oxaliplatin;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Gemcitabine;Oxaliplatin;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Gemcitabine;Oxaliplatin;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Goserelin Acetate;Rituximab,Cyclophosphamide;Doxorubicin Hydrochloride;Goserelin Acetate;Rituximab,Cyclophosphamide;Doxorubicin;Goserelin Acetate;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Methotrexate;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Methotrexate;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Methotrexate;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Paclitaxel;Trastuzumab,Cyclophosphamide;Doxorubicin Hydrochloride;Paclitaxel;Trastuzumab,Cyclophosphamide;Doxorubicin;Paclitaxel;Trastuzumab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Pemetrexed;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Pemetrexed;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Pemetrexed;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Pralatrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Pralatrexate;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Pralatrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Rituximab,Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab,Cyclophosphamide;Doxorubicin;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cyclophosphamide;Doxorubicin;Vincristine Sulfate,Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate,Cyclophosphamide;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cytarabine;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate,Cytarabine;Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Cytarabine;Doxorubicin;Methotrexate;Vincristine Sulfate,Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate,Cytarabine;Doxorubicin;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin,Dacarbazine;Doxorubicin Hydrochloride,Dacarbazine;Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Etoposide,Dacarbazine;Doxorubicin Hydrochloride;Etoposide,Dacarbazine;Doxorubicin;Etoposide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Etoposide;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine,Dacarbazine;Doxorubicin;Etoposide;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine,Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine;Vinorelbine Tartrate,Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine;Vinorelbine Tartrate,Dacarbazine;Doxorubicin;Gemcitabine;Vinblastine;Vinorelbine Tartrate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Goserelin Acetate;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Goserelin Acetate;Vinblastine,Dacarbazine;Doxorubicin;Goserelin Acetate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Leuprolide Acetate;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Leuprolide Acetate;Vinblastine,Dacarbazine;Doxorubicin;Leuprolide Acetate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Methotrexate,Dacarbazine;Doxorubicin Hydrochloride;Methotrexate,Dacarbazine;Doxorubicin;Methotrexate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Methotrexate;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Methotrexate;Vinblastine,Dacarbazine;Doxorubicin;Methotrexate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Rituximab;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine,Dacarbazine;Doxorubicin;Rituximab;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Vinblastine,Dacarbazine;Doxorubicin Hydrochloride;Vinblastine,Dacarbazine;Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate,Dacarbazine;Doxorubicin;Vinblastine;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Dacarbazine;Doxorubicin;Vincristine Sulfate,Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate,Dacarbazine;Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin,Doxorubicin Hydrochloride,Doxorubicin,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate,Doxorubicin;Etoposide;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Etoposide;Vincristine Sulfate,Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate,Doxorubicin;Etoposide;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Gemcitabine,Doxorubicin Hydrochloride;Gemcitabine,Doxorubicin;Gemcitabine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Gemcitabine;Ifosfamide,Doxorubicin Hydrochloride;Gemcitabine;Ifosfamide,Doxorubicin;Gemcitabine;Ifosfamide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Gemcitabine;Rituximab;Vinorelbine Tartrate,Doxorubicin Hydrochloride;Gemcitabine;Rituximab;Vinorelbine Tartrate,Doxorubicin;Gemcitabine;Rituximab;Vinorelbine Tartrate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Gemcitabine;Vinorelbine Tartrate,Doxorubicin Hydrochloride;Gemcitabine;Vinorelbine Tartrate,Doxorubicin;Gemcitabine;Vinorelbine Tartrate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Ifosfamide,Doxorubicin Hydrochloride;Ifosfamide,Doxorubicin;Ifosfamide,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Methotrexate,Doxorubicin Hydrochloride;Methotrexate,Doxorubicin;Methotrexate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate,Doxorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Methotrexate;Vinblastine,Doxorubicin Hydrochloride;Methotrexate;Vinblastine,Doxorubicin;Methotrexate;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Methotrexate;Vincristine Sulfate,Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate,Doxorubicin;Methotrexate;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Rituximab,Doxorubicin Hydrochloride;Rituximab,Doxorubicin;Rituximab,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Rituximab;Vincristine Sulfate,Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate,Doxorubicin;Rituximab;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Vinblastine,Doxorubicin Hydrochloride;Vinblastine,Doxorubicin;Vinblastine,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+label_only,Doxorubicin;Vincristine Sulfate,Doxorubicin Hydrochloride;Vincristine Sulfate,Doxorubicin;Vincristine Sulfate,,Doxorubicin naming (Phase 164: Adriamycin / Doxorubicin Hydrochloride -> Doxorubicin)
+unchanged,Ado-Trastuzumab Emtansine;Eribulin Mesylate;Gemcitabine;Goserelin Acetate;Trastuzumab,Ado-Trastuzumab Emtansine;Eribulin Mesylate;Gemcitabine;Goserelin Acetate;Trastuzumab,Ado-Trastuzumab Emtansine;Eribulin Mesylate;Gemcitabine;Goserelin Acetate;Trastuzumab,,
+unchanged,Ado-Trastuzumab Emtansine;Goserelin Acetate;Trastuzumab;Vinorelbine Tartrate,Ado-Trastuzumab Emtansine;Goserelin Acetate;Trastuzumab;Vinorelbine Tartrate,Ado-Trastuzumab Emtansine;Goserelin Acetate;Trastuzumab;Vinorelbine Tartrate,,
+unchanged,Antineoplastic Drugs;Bendamustine;Cisplatin;Not Otherwise Classified,Antineoplastic Drugs;Bendamustine;Cisplatin;Not Otherwise Classified,Antineoplastic Drugs;Bendamustine;Cisplatin;Not Otherwise Classified,,
+unchanged,Antineoplastic Drugs;Bendamustine;Not Otherwise Classified;Rituximab,Antineoplastic Drugs;Bendamustine;Not Otherwise Classified;Rituximab,Antineoplastic Drugs;Bendamustine;Not Otherwise Classified;Rituximab,,
+unchanged,Antineoplastic Drugs;Cisplatin;Gemcitabine;Not Otherwise Classified,Antineoplastic Drugs;Cisplatin;Gemcitabine;Not Otherwise Classified,Antineoplastic Drugs;Cisplatin;Gemcitabine;Not Otherwise Classified,,
+unchanged,Antineoplastic Drugs;Not Otherwise Classified,Antineoplastic Drugs;Not Otherwise Classified,Antineoplastic Drugs;Not Otherwise Classified,,
+unchanged,Antineoplastic Drugs;Not Otherwise Classified;Rituximab,Antineoplastic Drugs;Not Otherwise Classified;Rituximab,Antineoplastic Drugs;Not Otherwise Classified;Rituximab,,
+unchanged,Arsenic Trioxide,Arsenic Trioxide,Arsenic Trioxide,,
+unchanged,Asparaginase;Calaspargase Pegol-Mknl;Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Calaspargase Pegol-Mknl;Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,Asparaginase;Calaspargase Pegol-Mknl;Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Nelarabine;Vincristine Sulfate,,
+unchanged,Asparaginase;Cyclophosphamide;Cytarabine;Methotrexate;Nelarabine;Pegaspargase;Vincristine Sulfate,Asparaginase;Cyclophosphamide;Cytarabine;Methotrexate;Nelarabine;Pegaspargase;Vincristine Sulfate,Asparaginase;Cyclophosphamide;Cytarabine;Methotrexate;Nelarabine;Pegaspargase;Vincristine Sulfate,,
+unchanged,Azacitidine,Azacitidine,Azacitidine,,
+unchanged,Bcg Live Intravesical Instillation,Bcg Live Intravesical Instillation,Bcg Live Intravesical Instillation,,
+unchanged,Bendamustine,Bendamustine,Bendamustine,,
+unchanged,Bendamustine;Bortezomib;Rituximab,Bendamustine;Bortezomib;Rituximab,Bendamustine;Bortezomib;Rituximab,,
+unchanged,Bendamustine;Carboplatin;Carmustine;Etoposide,Bendamustine;Carboplatin;Carmustine;Etoposide,Bendamustine;Carboplatin;Carmustine;Etoposide,,
+unchanged,Bendamustine;Carboplatin;Carmustine;Etoposide;Ifosfamide,Bendamustine;Carboplatin;Carmustine;Etoposide;Ifosfamide,Bendamustine;Carboplatin;Carmustine;Etoposide;Ifosfamide,,
+unchanged,Bendamustine;Carboplatin;Etoposide;Ifosfamide,Bendamustine;Carboplatin;Etoposide;Ifosfamide,Bendamustine;Carboplatin;Etoposide;Ifosfamide,,
+unchanged,Bendamustine;Carboplatin;Gemcitabine,Bendamustine;Carboplatin;Gemcitabine,Bendamustine;Carboplatin;Gemcitabine,,
+unchanged,Bendamustine;Carmustine,Bendamustine;Carmustine,Bendamustine;Carmustine,,
+unchanged,Bendamustine;Carmustine;Cisplatin;Etoposide,Bendamustine;Carmustine;Cisplatin;Etoposide,Bendamustine;Carmustine;Cisplatin;Etoposide,,
+unchanged,Bendamustine;Carmustine;Cytarabine;Etoposide,Bendamustine;Carmustine;Cytarabine;Etoposide,Bendamustine;Carmustine;Cytarabine;Etoposide,,
+unchanged,Bendamustine;Carmustine;Etoposide,Bendamustine;Carmustine;Etoposide,Bendamustine;Carmustine;Etoposide,,
+unchanged,Bendamustine;Carmustine;Etoposide;Gemcitabine,Bendamustine;Carmustine;Etoposide;Gemcitabine,Bendamustine;Carmustine;Etoposide;Gemcitabine,,
+unchanged,Bendamustine;Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,Bendamustine;Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,Bendamustine;Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Bendamustine;Cisplatin,Bendamustine;Cisplatin,Bendamustine;Cisplatin,,
+unchanged,Bendamustine;Cisplatin;Cyclophosphamide;Methotrexate,Bendamustine;Cisplatin;Cyclophosphamide;Methotrexate,Bendamustine;Cisplatin;Cyclophosphamide;Methotrexate,,
+unchanged,Bendamustine;Cisplatin;Etoposide,Bendamustine;Cisplatin;Etoposide,Bendamustine;Cisplatin;Etoposide,,
+unchanged,Bendamustine;Cyclophosphamide,Bendamustine;Cyclophosphamide,Bendamustine;Cyclophosphamide,,
+unchanged,Bendamustine;Cyclophosphamide;Etoposide,Bendamustine;Cyclophosphamide;Etoposide,Bendamustine;Cyclophosphamide;Etoposide,,
+unchanged,Bendamustine;Cyclophosphamide;Fludarabine Phosphate;Rituximab,Bendamustine;Cyclophosphamide;Fludarabine Phosphate;Rituximab,Bendamustine;Cyclophosphamide;Fludarabine Phosphate;Rituximab,,
+unchanged,Bendamustine;Cyclophosphamide;Rituximab;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Rituximab;Vincristine Sulfate,Bendamustine;Cyclophosphamide;Rituximab;Vincristine Sulfate,,
+unchanged,Bendamustine;Etoposide,Bendamustine;Etoposide,Bendamustine;Etoposide,,
+unchanged,Bendamustine;Etoposide;Ifosfamide,Bendamustine;Etoposide;Ifosfamide,Bendamustine;Etoposide;Ifosfamide,,
+unchanged,Bendamustine;Fludarabine Phosphate,Bendamustine;Fludarabine Phosphate,Bendamustine;Fludarabine Phosphate,,
+unchanged,Bendamustine;Gemcitabine,Bendamustine;Gemcitabine,Bendamustine;Gemcitabine,,
+unchanged,Bendamustine;Gemcitabine;Methotrexate,Bendamustine;Gemcitabine;Methotrexate,Bendamustine;Gemcitabine;Methotrexate,,
+unchanged,Bendamustine;Gemcitabine;Oxaliplatin,Bendamustine;Gemcitabine;Oxaliplatin,Bendamustine;Gemcitabine;Oxaliplatin,,
+unchanged,Bendamustine;Gemcitabine;Oxaliplatin;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Gemcitabine;Oxaliplatin;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Gemcitabine;Oxaliplatin;Polatuzumab Vedotin-Piiq;Rituximab,,
+unchanged,Bendamustine;Gemcitabine;Rituximab,Bendamustine;Gemcitabine;Rituximab,Bendamustine;Gemcitabine;Rituximab,,
+unchanged,Bendamustine;Gemcitabine;Vinorelbine Tartrate,Bendamustine;Gemcitabine;Vinorelbine Tartrate,Bendamustine;Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Bendamustine;Ifosfamide;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Ifosfamide;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Ifosfamide;Polatuzumab Vedotin-Piiq;Rituximab,,
+unchanged,Bendamustine;Methotrexate,Bendamustine;Methotrexate,Bendamustine;Methotrexate,,
+unchanged,Bendamustine;Methotrexate;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Methotrexate;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Methotrexate;Polatuzumab Vedotin-Piiq;Rituximab,,
+unchanged,Bendamustine;Methotrexate;Rituximab,Bendamustine;Methotrexate;Rituximab,Bendamustine;Methotrexate;Rituximab,,
+unchanged,Bendamustine;Obinutuzumab,Bendamustine;Obinutuzumab,Bendamustine;Obinutuzumab,,
+unchanged,Bendamustine;Pemetrexed;Rituximab,Bendamustine;Pemetrexed;Rituximab,Bendamustine;Pemetrexed;Rituximab,,
+unchanged,Bendamustine;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Polatuzumab Vedotin-Piiq;Rituximab,Bendamustine;Polatuzumab Vedotin-Piiq;Rituximab,,
+unchanged,Bendamustine;Rituximab,Bendamustine;Rituximab,Bendamustine;Rituximab,,
+unchanged,Bendamustine;Vinblastine,Bendamustine;Vinblastine,Bendamustine;Vinblastine,,
+unchanged,Bevacizumab,Bevacizumab,Bevacizumab,,
+unchanged,Bevacizumab;Bleomycin,Bevacizumab;Bleomycin,Bevacizumab;Bleomycin,,
+unchanged,Bevacizumab;Carboplatin,Bevacizumab;Carboplatin,Bevacizumab;Carboplatin,,
+unchanged,Bevacizumab;Carboplatin;Cyclophosphamide;Etoposide,Bevacizumab;Carboplatin;Cyclophosphamide;Etoposide,Bevacizumab;Carboplatin;Cyclophosphamide;Etoposide,,
+unchanged,Bevacizumab;Carboplatin;Paclitaxel,Bevacizumab;Carboplatin;Paclitaxel,Bevacizumab;Carboplatin;Paclitaxel,,
+unchanged,Bevacizumab;Carboplatin;Pemetrexed,Bevacizumab;Carboplatin;Pemetrexed,Bevacizumab;Carboplatin;Pemetrexed,,
+unchanged,Bevacizumab;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Bevacizumab;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Bevacizumab;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,,
+unchanged,Bevacizumab;Cytarabine,Bevacizumab;Cytarabine,Bevacizumab;Cytarabine,,
+unchanged,Bevacizumab;Fluorouracil,Bevacizumab;Fluorouracil,Bevacizumab;Fluorouracil,,
+unchanged,Bevacizumab;Fluorouracil;Irinotecan,Bevacizumab;Fluorouracil;Irinotecan,Bevacizumab;Fluorouracil;Irinotecan,,
+unchanged,Bevacizumab;Fluorouracil;Irinotecan;Oxaliplatin,Bevacizumab;Fluorouracil;Irinotecan;Oxaliplatin,Bevacizumab;Fluorouracil;Irinotecan;Oxaliplatin,,
+unchanged,Bevacizumab;Fluorouracil;Oxaliplatin,Bevacizumab;Fluorouracil;Oxaliplatin,Bevacizumab;Fluorouracil;Oxaliplatin,,
+unchanged,Bevacizumab;Gemcitabine,Bevacizumab;Gemcitabine,Bevacizumab;Gemcitabine,,
+unchanged,Bevacizumab;Gemcitabine;Paclitaxel,Bevacizumab;Gemcitabine;Paclitaxel,Bevacizumab;Gemcitabine;Paclitaxel,,
+unchanged,Bevacizumab;Irinotecan,Bevacizumab;Irinotecan,Bevacizumab;Irinotecan,,
+unchanged,Bleomycin,Bleomycin,Bleomycin,,
+unchanged,Bleomycin;Cisplatin;Etoposide,Bleomycin;Cisplatin;Etoposide,Bleomycin;Cisplatin;Etoposide,,
+unchanged,Bleomycin;Dacarbazine,Bleomycin;Dacarbazine,Bleomycin;Dacarbazine,,
+unchanged,Bleomycin;Dacarbazine;Vinblastine,Bleomycin;Dacarbazine;Vinblastine,Bleomycin;Dacarbazine;Vinblastine,,
+unchanged,Bleomycin;Dacarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Vinblastine;Vincristine Sulfate,Bleomycin;Dacarbazine;Vinblastine;Vincristine Sulfate,,
+unchanged,Bleomycin;Etoposide;Vincristine Sulfate,Bleomycin;Etoposide;Vincristine Sulfate,Bleomycin;Etoposide;Vincristine Sulfate,,
+unchanged,Bleomycin;Gemcitabine;Vincristine Sulfate,Bleomycin;Gemcitabine;Vincristine Sulfate,Bleomycin;Gemcitabine;Vincristine Sulfate,,
+unchanged,Bleomycin;Methotrexate;Vinblastine,Bleomycin;Methotrexate;Vinblastine,Bleomycin;Methotrexate;Vinblastine,,
+unchanged,Bleomycin;Procarbazine;Vincristine Sulfate,Bleomycin;Procarbazine;Vincristine Sulfate,Bleomycin;Procarbazine;Vincristine Sulfate,,
+unchanged,Bleomycin;Vinblastine,Bleomycin;Vinblastine,Bleomycin;Vinblastine,,
+unchanged,Bleomycin;Vincristine Sulfate,Bleomycin;Vincristine Sulfate,Bleomycin;Vincristine Sulfate,,
+unchanged,Blinatumomab,Blinatumomab,Blinatumomab,,
+unchanged,Bortezomib,Bortezomib,Bortezomib,,
+unchanged,Bortezomib;Cyclophosphamide,Bortezomib;Cyclophosphamide,Bortezomib;Cyclophosphamide,,
+unchanged,Bortezomib;Cyclophosphamide;Rituximab;Vincristine Sulfate,Bortezomib;Cyclophosphamide;Rituximab;Vincristine Sulfate,Bortezomib;Cyclophosphamide;Rituximab;Vincristine Sulfate,,
+unchanged,Bortezomib;Daratumumab;Methotrexate,Bortezomib;Daratumumab;Methotrexate,Bortezomib;Daratumumab;Methotrexate,,
+unchanged,Bortezomib;Gemcitabine;Oxaliplatin,Bortezomib;Gemcitabine;Oxaliplatin,Bortezomib;Gemcitabine;Oxaliplatin,,
+unchanged,Bortezomib;Rituximab,Bortezomib;Rituximab,Bortezomib;Rituximab,,
+unchanged,Cabazitaxel;Cetuximab;Fluorouracil;Irinotecan,Cabazitaxel;Cetuximab;Fluorouracil;Irinotecan,Cabazitaxel;Cetuximab;Fluorouracil;Irinotecan,,
+unchanged,Carboplatin,Carboplatin,Carboplatin,,
+unchanged,Carboplatin;Carmustine;Cytarabine;Etoposide;Ifosfamide;Mesna,Carboplatin;Carmustine;Cytarabine;Etoposide;Ifosfamide;Mesna,Carboplatin;Carmustine;Cytarabine;Etoposide;Ifosfamide;Mesna,,
+unchanged,Carboplatin;Carmustine;Etoposide,Carboplatin;Carmustine;Etoposide,Carboplatin;Carmustine;Etoposide,,
+unchanged,Carboplatin;Carmustine;Etoposide;Ifosfamide,Carboplatin;Carmustine;Etoposide;Ifosfamide,Carboplatin;Carmustine;Etoposide;Ifosfamide,,
+unchanged,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna,,
+unchanged,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna;Rituximab,,
+unchanged,Carboplatin;Cetuximab;Cisplatin;Gemcitabine,Carboplatin;Cetuximab;Cisplatin;Gemcitabine,Carboplatin;Cetuximab;Cisplatin;Gemcitabine,,
+unchanged,Carboplatin;Cisplatin,Carboplatin;Cisplatin,Carboplatin;Cisplatin,,
+unchanged,Carboplatin;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Carboplatin;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Carboplatin;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,,
+unchanged,Carboplatin;Cisplatin;Etoposide,Carboplatin;Cisplatin;Etoposide,Carboplatin;Cisplatin;Etoposide,,
+unchanged,Carboplatin;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,Carboplatin;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,Carboplatin;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,,
+unchanged,Carboplatin;Cisplatin;Gemcitabine;Paclitaxel,Carboplatin;Cisplatin;Gemcitabine;Paclitaxel,Carboplatin;Cisplatin;Gemcitabine;Paclitaxel,,
+unchanged,Carboplatin;Cyclophosphamide;Etoposide,Carboplatin;Cyclophosphamide;Etoposide,Carboplatin;Cyclophosphamide;Etoposide,,
+unchanged,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide,,
+unchanged,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Mesna;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Mesna;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Mesna;Vincristine Sulfate,,
+unchanged,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Vincristine Sulfate,Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Vincristine Sulfate,,
+unchanged,Carboplatin;Cytarabine;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Cytarabine;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Cytarabine;Etoposide;Ifosfamide;Mesna;Rituximab,,
+unchanged,Carboplatin;Docetaxel,Carboplatin;Docetaxel,Carboplatin;Docetaxel,,
+unchanged,Carboplatin;Docetaxel;Fluorouracil,Carboplatin;Docetaxel;Fluorouracil,Carboplatin;Docetaxel;Fluorouracil,,
+unchanged,Carboplatin;Docetaxel;Paclitaxel,Carboplatin;Docetaxel;Paclitaxel,Carboplatin;Docetaxel;Paclitaxel,,
+unchanged,Carboplatin;Docetaxel;Pertuzumab;Trastuzumab,Carboplatin;Docetaxel;Pertuzumab;Trastuzumab,Carboplatin;Docetaxel;Pertuzumab;Trastuzumab,,
+unchanged,Carboplatin;Eribulin Mesylate;Gemcitabine;Sacituzumab Govitecan-Hziy,Carboplatin;Eribulin Mesylate;Gemcitabine;Sacituzumab Govitecan-Hziy,Carboplatin;Eribulin Mesylate;Gemcitabine;Sacituzumab Govitecan-Hziy,,
+unchanged,Carboplatin;Etoposide,Carboplatin;Etoposide,Carboplatin;Etoposide,,
+unchanged,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna,,
+unchanged,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate,,
+unchanged,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin,,
+unchanged,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin;Romidepsin,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin;Romidepsin,Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin;Romidepsin,,
+unchanged,Carboplatin;Etoposide;Ifosfamide,Carboplatin;Etoposide;Ifosfamide,Carboplatin;Etoposide;Ifosfamide,,
+unchanged,Carboplatin;Etoposide;Ifosfamide;Mesna,Carboplatin;Etoposide;Ifosfamide;Mesna,Carboplatin;Etoposide;Ifosfamide;Mesna,,
+unchanged,Carboplatin;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Etoposide;Ifosfamide;Mesna;Rituximab,Carboplatin;Etoposide;Ifosfamide;Mesna;Rituximab,,
+unchanged,Carboplatin;Etoposide;Ifosfamide;Methotrexate,Carboplatin;Etoposide;Ifosfamide;Methotrexate,Carboplatin;Etoposide;Ifosfamide;Methotrexate,,
+unchanged,Carboplatin;Etoposide;Ifosfamide;Rituximab,Carboplatin;Etoposide;Ifosfamide;Rituximab,Carboplatin;Etoposide;Ifosfamide;Rituximab,,
+unchanged,Carboplatin;Etoposide;Methotrexate,Carboplatin;Etoposide;Methotrexate,Carboplatin;Etoposide;Methotrexate,,
+unchanged,Carboplatin;Fluorouracil;Mitomycin,Carboplatin;Fluorouracil;Mitomycin,Carboplatin;Fluorouracil;Mitomycin,,
+unchanged,Carboplatin;Fluorouracil;Oxaliplatin;Paclitaxel,Carboplatin;Fluorouracil;Oxaliplatin;Paclitaxel,Carboplatin;Fluorouracil;Oxaliplatin;Paclitaxel,,
+unchanged,Carboplatin;Gemcitabine,Carboplatin;Gemcitabine,Carboplatin;Gemcitabine,,
+unchanged,Carboplatin;Gemcitabine;Rituximab,Carboplatin;Gemcitabine;Rituximab,Carboplatin;Gemcitabine;Rituximab,,
+unchanged,Carboplatin;Ifosfamide,Carboplatin;Ifosfamide,Carboplatin;Ifosfamide,,
+unchanged,Carboplatin;Ifosfamide;Mesna,Carboplatin;Ifosfamide;Mesna,Carboplatin;Ifosfamide;Mesna,,
+unchanged,Carboplatin;Ifosfamide;Mesna;Paclitaxel,Carboplatin;Ifosfamide;Mesna;Paclitaxel,Carboplatin;Ifosfamide;Mesna;Paclitaxel,,
+unchanged,Carboplatin;Lurbinectedin,Carboplatin;Lurbinectedin,Carboplatin;Lurbinectedin,,
+unchanged,Carboplatin;Paclitaxel,Carboplatin;Paclitaxel,Carboplatin;Paclitaxel,,
+unchanged,Carboplatin;Paclitaxel;Pemetrexed,Carboplatin;Paclitaxel;Pemetrexed,Carboplatin;Paclitaxel;Pemetrexed,,
+unchanged,Carboplatin;Pemetrexed,Carboplatin;Pemetrexed,Carboplatin;Pemetrexed,,
+unchanged,Carboplatin;Pemetrexed;Vinorelbine Tartrate,Carboplatin;Pemetrexed;Vinorelbine Tartrate,Carboplatin;Pemetrexed;Vinorelbine Tartrate,,
+unchanged,Carboplatin;Vinorelbine Tartrate,Carboplatin;Vinorelbine Tartrate,Carboplatin;Vinorelbine Tartrate,,
+unchanged,Carfilzomib;Carmustine;Cyclophosphamide;Etoposide,Carfilzomib;Carmustine;Cyclophosphamide;Etoposide,Carfilzomib;Carmustine;Cyclophosphamide;Etoposide,,
+unchanged,Carfilzomib;Daratumumab,Carfilzomib;Daratumumab,Carfilzomib;Daratumumab,,
+unchanged,Carfilzomib;Rituximab,Carfilzomib;Rituximab,Carfilzomib;Rituximab,,
+unchanged,Carmustine,Carmustine,Carmustine,,
+unchanged,Carmustine;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,Carmustine;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,Carmustine;Cisplatin;Etoposide;Gemcitabine;Ifosfamide,,
+unchanged,Carmustine;Cisplatin;Etoposide;Methotrexate;Rituximab,Carmustine;Cisplatin;Etoposide;Methotrexate;Rituximab,Carmustine;Cisplatin;Etoposide;Methotrexate;Rituximab,,
+unchanged,Carmustine;Cytarabine;Etoposide,Carmustine;Cytarabine;Etoposide,Carmustine;Cytarabine;Etoposide,,
+unchanged,Carmustine;Cytarabine;Etoposide;Gemcitabine;Melphalan;Vinorelbine Tartrate,Carmustine;Cytarabine;Etoposide;Gemcitabine;Melphalan;Vinorelbine Tartrate,Carmustine;Cytarabine;Etoposide;Gemcitabine;Melphalan;Vinorelbine Tartrate,,
+unchanged,Carmustine;Etoposide,Carmustine;Etoposide,Carmustine;Etoposide,,
+unchanged,Carmustine;Etoposide;Gemcitabine,Carmustine;Etoposide;Gemcitabine,Carmustine;Etoposide;Gemcitabine,,
+unchanged,Carmustine;Etoposide;Gemcitabine;Oxaliplatin,Carmustine;Etoposide;Gemcitabine;Oxaliplatin,Carmustine;Etoposide;Gemcitabine;Oxaliplatin,,
+unchanged,Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Carmustine;Etoposide;Ifosfamide,Carmustine;Etoposide;Ifosfamide,Carmustine;Etoposide;Ifosfamide,,
+unchanged,Carmustine;Etoposide;Leuprolide Acetate,Carmustine;Etoposide;Leuprolide Acetate,Carmustine;Etoposide;Leuprolide Acetate,,
+unchanged,Carmustine;Etoposide;Rituximab,Carmustine;Etoposide;Rituximab,Carmustine;Etoposide;Rituximab,,
+unchanged,Carmustine;Methotrexate;Vincristine Sulfate,Carmustine;Methotrexate;Vincristine Sulfate,Carmustine;Methotrexate;Vincristine Sulfate,,
+unchanged,Cetuximab,Cetuximab,Cetuximab,,
+unchanged,Cetuximab;Cisplatin;Docetaxel;Fluorouracil,Cetuximab;Cisplatin;Docetaxel;Fluorouracil,Cetuximab;Cisplatin;Docetaxel;Fluorouracil,,
+unchanged,Cetuximab;Fluorouracil;Irinotecan,Cetuximab;Fluorouracil;Irinotecan,Cetuximab;Fluorouracil;Irinotecan,,
+unchanged,Cetuximab;Gemcitabine;Paclitaxel,Cetuximab;Gemcitabine;Paclitaxel,Cetuximab;Gemcitabine;Paclitaxel,,
+unchanged,Cetuximab;Irinotecan,Cetuximab;Irinotecan,Cetuximab;Irinotecan,,
+unchanged,Cisplatin,Cisplatin,Cisplatin,,
+unchanged,Cisplatin;Cyclophosphamide,Cisplatin;Cyclophosphamide,Cisplatin;Cyclophosphamide,,
+unchanged,Cisplatin;Cyclophosphamide;Etoposide,Cisplatin;Cyclophosphamide;Etoposide,Cisplatin;Cyclophosphamide;Etoposide,,
+unchanged,Cisplatin;Cyclophosphamide;Etoposide;Ifosfamide,Cisplatin;Cyclophosphamide;Etoposide;Ifosfamide,Cisplatin;Cyclophosphamide;Etoposide;Ifosfamide,,
+unchanged,Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate,,
+unchanged,Cisplatin;Cyclophosphamide;Fludarabine Phosphate;Rituximab,Cisplatin;Cyclophosphamide;Fludarabine Phosphate;Rituximab,Cisplatin;Cyclophosphamide;Fludarabine Phosphate;Rituximab,,
+unchanged,Cisplatin;Cytarabine,Cisplatin;Cytarabine,Cisplatin;Cytarabine,,
+unchanged,Cisplatin;Cytarabine;Etoposide;Fludarabine Phosphate;Mitoxantrone;Oxaliplatin,Cisplatin;Cytarabine;Etoposide;Fludarabine Phosphate;Mitoxantrone;Oxaliplatin,Cisplatin;Cytarabine;Etoposide;Fludarabine Phosphate;Mitoxantrone;Oxaliplatin,,
+unchanged,Cisplatin;Cytarabine;Etoposide;Rituximab,Cisplatin;Cytarabine;Etoposide;Rituximab,Cisplatin;Cytarabine;Etoposide;Rituximab,,
+unchanged,Cisplatin;Cytarabine;Etoposide;Vinblastine,Cisplatin;Cytarabine;Etoposide;Vinblastine,Cisplatin;Cytarabine;Etoposide;Vinblastine,,
+unchanged,Cisplatin;Etoposide,Cisplatin;Etoposide,Cisplatin;Etoposide,,
+unchanged,Cisplatin;Etoposide;Gemcitabine,Cisplatin;Etoposide;Gemcitabine,Cisplatin;Etoposide;Gemcitabine,,
+unchanged,Cisplatin;Fluorouracil,Cisplatin;Fluorouracil,Cisplatin;Fluorouracil,,
+unchanged,Cisplatin;Gemcitabine,Cisplatin;Gemcitabine,Cisplatin;Gemcitabine,,
+unchanged,Cisplatin;Gemcitabine;Rituximab,Cisplatin;Gemcitabine;Rituximab,Cisplatin;Gemcitabine;Rituximab,,
+unchanged,Cisplatin;Ifosfamide;Mesna;Paclitaxel,Cisplatin;Ifosfamide;Mesna;Paclitaxel,Cisplatin;Ifosfamide;Mesna;Paclitaxel,,
+unchanged,Cisplatin;Pemetrexed,Cisplatin;Pemetrexed,Cisplatin;Pemetrexed,,
+unchanged,Copanlisib;Rituximab,Copanlisib;Rituximab,Copanlisib;Rituximab,,
+unchanged,Cyclophosphamide,Cyclophosphamide,Cyclophosphamide,,
+unchanged,Cyclophosphamide;Cytarabine;Daunorubicin;Etoposide;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Etoposide;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Etoposide;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Cytarabine;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Cytarabine;Methotrexate;Pegaspargase;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,Cyclophosphamide;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Docetaxel,Cyclophosphamide;Docetaxel,Cyclophosphamide;Docetaxel,,
+unchanged,Cyclophosphamide;Docetaxel;Goserelin Acetate,Cyclophosphamide;Docetaxel;Goserelin Acetate,Cyclophosphamide;Docetaxel;Goserelin Acetate,,
+unchanged,Cyclophosphamide;Docetaxel;Leuprolide Acetate,Cyclophosphamide;Docetaxel;Leuprolide Acetate,Cyclophosphamide;Docetaxel;Leuprolide Acetate,,
+unchanged,Cyclophosphamide;Epirubicin;Fluorouracil;Paclitaxel,Cyclophosphamide;Epirubicin;Fluorouracil;Paclitaxel,Cyclophosphamide;Epirubicin;Fluorouracil;Paclitaxel,,
+unchanged,Cyclophosphamide;Etoposide,Cyclophosphamide;Etoposide,Cyclophosphamide;Etoposide,,
+unchanged,Cyclophosphamide;Etoposide;Fludarabine Phosphate;Ifosfamide,Cyclophosphamide;Etoposide;Fludarabine Phosphate;Ifosfamide,Cyclophosphamide;Etoposide;Fludarabine Phosphate;Ifosfamide,,
+unchanged,Cyclophosphamide;Etoposide;Gemcitabine;Ifosfamide,Cyclophosphamide;Etoposide;Gemcitabine;Ifosfamide,Cyclophosphamide;Etoposide;Gemcitabine;Ifosfamide,,
+unchanged,Cyclophosphamide;Etoposide;Gemcitabine;Vincristine Sulfate,Cyclophosphamide;Etoposide;Gemcitabine;Vincristine Sulfate,Cyclophosphamide;Etoposide;Gemcitabine;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Etoposide;Ifosfamide;Methotrexate;Rituximab,Cyclophosphamide;Etoposide;Ifosfamide;Methotrexate;Rituximab,Cyclophosphamide;Etoposide;Ifosfamide;Methotrexate;Rituximab,,
+unchanged,Cyclophosphamide;Etoposide;Irinotecan;Vincristine Sulfate,Cyclophosphamide;Etoposide;Irinotecan;Vincristine Sulfate,Cyclophosphamide;Etoposide;Irinotecan;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Etoposide;Methotrexate,Cyclophosphamide;Etoposide;Methotrexate,Cyclophosphamide;Etoposide;Methotrexate,,
+unchanged,Cyclophosphamide;Etoposide;Procarbazine,Cyclophosphamide;Etoposide;Procarbazine,Cyclophosphamide;Etoposide;Procarbazine,,
+unchanged,Cyclophosphamide;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Etoposide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Etoposide;Rituximab;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Etoposide;Vincristine Sulfate,Cyclophosphamide;Etoposide;Vincristine Sulfate,Cyclophosphamide;Etoposide;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Fludarabine Phosphate,Cyclophosphamide;Fludarabine Phosphate,Cyclophosphamide;Fludarabine Phosphate,,
+unchanged,Cyclophosphamide;Fludarabine Phosphate;Gemcitabine;Oxaliplatin;Rituximab,Cyclophosphamide;Fludarabine Phosphate;Gemcitabine;Oxaliplatin;Rituximab,Cyclophosphamide;Fludarabine Phosphate;Gemcitabine;Oxaliplatin;Rituximab,,
+unchanged,Cyclophosphamide;Fludarabine Phosphate;Rituximab,Cyclophosphamide;Fludarabine Phosphate;Rituximab,Cyclophosphamide;Fludarabine Phosphate;Rituximab,,
+unchanged,Cyclophosphamide;Fludarabine Phosphate;Tafasitamab-Cxix,Cyclophosphamide;Fludarabine Phosphate;Tafasitamab-Cxix,Cyclophosphamide;Fludarabine Phosphate;Tafasitamab-Cxix,,
+unchanged,Cyclophosphamide;Gemcitabine;Rituximab;Vincristine Sulfate,Cyclophosphamide;Gemcitabine;Rituximab;Vincristine Sulfate,Cyclophosphamide;Gemcitabine;Rituximab;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Gemcitabine;Vincristine Sulfate,Cyclophosphamide;Gemcitabine;Vincristine Sulfate,Cyclophosphamide;Gemcitabine;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Gemcitabine;Vinorelbine Tartrate,Cyclophosphamide;Gemcitabine;Vinorelbine Tartrate,Cyclophosphamide;Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Cyclophosphamide;Methotrexate,Cyclophosphamide;Methotrexate,Cyclophosphamide;Methotrexate,,
+unchanged,Cyclophosphamide;Methotrexate;Rituximab,Cyclophosphamide;Methotrexate;Rituximab,Cyclophosphamide;Methotrexate;Rituximab,,
+unchanged,Cyclophosphamide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Methotrexate;Vincristine Sulfate,Cyclophosphamide;Methotrexate;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Obinutuzumab;Vincristine Sulfate,Cyclophosphamide;Obinutuzumab;Vincristine Sulfate,Cyclophosphamide;Obinutuzumab;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Procarbazine,Cyclophosphamide;Procarbazine,Cyclophosphamide;Procarbazine,,
+unchanged,Cyclophosphamide;Procarbazine;Vincristine Sulfate,Cyclophosphamide;Procarbazine;Vincristine Sulfate,Cyclophosphamide;Procarbazine;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Rituximab,Cyclophosphamide;Rituximab,Cyclophosphamide;Rituximab,,
+unchanged,Cyclophosphamide;Rituximab;Vinblastine,Cyclophosphamide;Rituximab;Vinblastine,Cyclophosphamide;Rituximab;Vinblastine,,
+unchanged,Cyclophosphamide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Rituximab;Vincristine Sulfate,Cyclophosphamide;Rituximab;Vincristine Sulfate,,
+unchanged,Cyclophosphamide;Vinblastine,Cyclophosphamide;Vinblastine,Cyclophosphamide;Vinblastine,,
+unchanged,Cyclophosphamide;Vincristine Sulfate,Cyclophosphamide;Vincristine Sulfate,Cyclophosphamide;Vincristine Sulfate,,
+unchanged,Cytarabine,Cytarabine,Cytarabine,,
+unchanged,Cytarabine;Daratumumab;Methotrexate,Cytarabine;Daratumumab;Methotrexate,Cytarabine;Daratumumab;Methotrexate,,
+unchanged,Cytarabine;Daunorubicin;Etoposide,Cytarabine;Daunorubicin;Etoposide,Cytarabine;Daunorubicin;Etoposide,,
+unchanged,Cytarabine;Etoposide;Melphalan,Cytarabine;Etoposide;Melphalan,Cytarabine;Etoposide;Melphalan,,
+unchanged,Cytarabine;Etoposide;Vincristine Sulfate,Cytarabine;Etoposide;Vincristine Sulfate,Cytarabine;Etoposide;Vincristine Sulfate,,
+unchanged,Cytarabine;Loncastuximab Tesirine-Lpyl;Methotrexate,Cytarabine;Loncastuximab Tesirine-Lpyl;Methotrexate,Cytarabine;Loncastuximab Tesirine-Lpyl;Methotrexate,,
+unchanged,Cytarabine;Mesna;Methotrexate,Cytarabine;Mesna;Methotrexate,Cytarabine;Mesna;Methotrexate,,
+unchanged,Cytarabine;Methotrexate,Cytarabine;Methotrexate,Cytarabine;Methotrexate,,
+unchanged,Cytarabine;Methotrexate;Nelarabine,Cytarabine;Methotrexate;Nelarabine,Cytarabine;Methotrexate;Nelarabine,,
+unchanged,Cytarabine;Methotrexate;Oxaliplatin;Rituximab,Cytarabine;Methotrexate;Oxaliplatin;Rituximab,Cytarabine;Methotrexate;Oxaliplatin;Rituximab,,
+unchanged,Cytarabine;Methotrexate;Rituximab,Cytarabine;Methotrexate;Rituximab,Cytarabine;Methotrexate;Rituximab,,
+unchanged,Cytarabine;Methotrexate;Vincristine Sulfate,Cytarabine;Methotrexate;Vincristine Sulfate,Cytarabine;Methotrexate;Vincristine Sulfate,,
+unchanged,Cytarabine;Rituximab;Vincristine Sulfate,Cytarabine;Rituximab;Vincristine Sulfate,Cytarabine;Rituximab;Vincristine Sulfate,,
+unchanged,Cytarabine;Vincristine Sulfate,Cytarabine;Vincristine Sulfate,Cytarabine;Vincristine Sulfate,,
+unchanged,Dacarbazine,Dacarbazine,Dacarbazine,,
+unchanged,Dacarbazine;Docetaxel;Gemcitabine,Dacarbazine;Docetaxel;Gemcitabine,Dacarbazine;Docetaxel;Gemcitabine,,
+unchanged,Dacarbazine;Vinblastine,Dacarbazine;Vinblastine,Dacarbazine;Vinblastine,,
+unchanged,Daratumumab,Daratumumab,Daratumumab,,
+unchanged,Daunorubicin;Methotrexate;Pegaspargase,Daunorubicin;Methotrexate;Pegaspargase,Daunorubicin;Methotrexate;Pegaspargase,,
+unchanged,Docetaxel,Docetaxel,Docetaxel,,
+unchanged,Docetaxel;Floxuridine;Rituximab,Docetaxel;Floxuridine;Rituximab,Docetaxel;Floxuridine;Rituximab,,
+unchanged,Docetaxel;Gemcitabine,Docetaxel;Gemcitabine,Docetaxel;Gemcitabine,,
+unchanged,Docetaxel;Gemcitabine;Ramucirumab,Docetaxel;Gemcitabine;Ramucirumab,Docetaxel;Gemcitabine;Ramucirumab,,
+unchanged,Docetaxel;Gemcitabine;Ramucirumab;Vinorelbine Tartrate,Docetaxel;Gemcitabine;Ramucirumab;Vinorelbine Tartrate,Docetaxel;Gemcitabine;Ramucirumab;Vinorelbine Tartrate,,
+unchanged,Docetaxel;Leuprolide Acetate,Docetaxel;Leuprolide Acetate,Docetaxel;Leuprolide Acetate,,
+unchanged,Docetaxel;Pemetrexed;Ramucirumab,Docetaxel;Pemetrexed;Ramucirumab,Docetaxel;Pemetrexed;Ramucirumab,,
+unchanged,Docetaxel;Pertuzumab;Trastuzumab,Docetaxel;Pertuzumab;Trastuzumab,Docetaxel;Pertuzumab;Trastuzumab,,
+unchanged,Docetaxel;Pertuzumab;Trastuzumab;Vinorelbine Tartrate,Docetaxel;Pertuzumab;Trastuzumab;Vinorelbine Tartrate,Docetaxel;Pertuzumab;Trastuzumab;Vinorelbine Tartrate,,
+unchanged,Epcoritamab-Bysp,Epcoritamab-Bysp,Epcoritamab-Bysp,,
+unchanged,Eribulin Mesylate,Eribulin Mesylate,Eribulin Mesylate,,
+unchanged,Eribulin Mesylate;Paclitaxel,Eribulin Mesylate;Paclitaxel,Eribulin Mesylate;Paclitaxel,,
+unchanged,Etoposide,Etoposide,Etoposide,,
+unchanged,Etoposide;Gemcitabine;Vinblastine,Etoposide;Gemcitabine;Vinblastine,Etoposide;Gemcitabine;Vinblastine,,
+unchanged,Etoposide;Gemcitabine;Vinorelbine Tartrate,Etoposide;Gemcitabine;Vinorelbine Tartrate,Etoposide;Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Etoposide;Ifosfamide,Etoposide;Ifosfamide,Etoposide;Ifosfamide,,
+unchanged,Etoposide;Ifosfamide;Mesna,Etoposide;Ifosfamide;Mesna,Etoposide;Ifosfamide;Mesna,,
+unchanged,Etoposide;Ifosfamide;Methotrexate,Etoposide;Ifosfamide;Methotrexate,Etoposide;Ifosfamide;Methotrexate,,
+unchanged,Etoposide;Methotrexate,Etoposide;Methotrexate,Etoposide;Methotrexate,,
+unchanged,Etoposide;Rituximab,Etoposide;Rituximab,Etoposide;Rituximab,,
+unchanged,Etoposide;Vinblastine,Etoposide;Vinblastine,Etoposide;Vinblastine,,
+unchanged,Fam-Trastuzumab Deruxtecan-Nxki;Goserelin Acetate;Paclitaxel,Fam-Trastuzumab Deruxtecan-Nxki;Goserelin Acetate;Paclitaxel,Fam-Trastuzumab Deruxtecan-Nxki;Goserelin Acetate;Paclitaxel,,
+unchanged,Fam-Trastuzumab Deruxtecan-Nxki;Thiotepa;Topotecan,Fam-Trastuzumab Deruxtecan-Nxki;Thiotepa;Topotecan,Fam-Trastuzumab Deruxtecan-Nxki;Thiotepa;Topotecan,,
+unchanged,Fluorouracil,Fluorouracil,Fluorouracil,,
+unchanged,Fluorouracil;Gemcitabine;Paclitaxel,Fluorouracil;Gemcitabine;Paclitaxel,Fluorouracil;Gemcitabine;Paclitaxel,,
+unchanged,Fluorouracil;Irinotecan,Fluorouracil;Irinotecan,Fluorouracil;Irinotecan,,
+unchanged,Fluorouracil;Irinotecan;Oxaliplatin,Fluorouracil;Irinotecan;Oxaliplatin,Fluorouracil;Irinotecan;Oxaliplatin,,
+unchanged,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel,,
+unchanged,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel;Ramucirumab,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel;Ramucirumab,Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel;Ramucirumab,,
+unchanged,Fluorouracil;Mitomycin,Fluorouracil;Mitomycin,Fluorouracil;Mitomycin,,
+unchanged,Fluorouracil;Oxaliplatin,Fluorouracil;Oxaliplatin,Fluorouracil;Oxaliplatin,,
+unchanged,Fulvestrant,Fulvestrant,Fulvestrant,,
+unchanged,Gemcitabine,Gemcitabine,Gemcitabine,,
+unchanged,Gemcitabine;Ifosfamide,Gemcitabine;Ifosfamide,Gemcitabine;Ifosfamide,,
+unchanged,Gemcitabine;Mechlorethamine;Oxaliplatin;Vinblastine;Vincristine Sulfate,Gemcitabine;Mechlorethamine;Oxaliplatin;Vinblastine;Vincristine Sulfate,Gemcitabine;Mechlorethamine;Oxaliplatin;Vinblastine;Vincristine Sulfate,,
+unchanged,Gemcitabine;Methotrexate,Gemcitabine;Methotrexate,Gemcitabine;Methotrexate,,
+unchanged,Gemcitabine;Methotrexate;Oxaliplatin;Rituximab,Gemcitabine;Methotrexate;Oxaliplatin;Rituximab,Gemcitabine;Methotrexate;Oxaliplatin;Rituximab,,
+unchanged,Gemcitabine;Oxaliplatin,Gemcitabine;Oxaliplatin,Gemcitabine;Oxaliplatin,,
+unchanged,Gemcitabine;Oxaliplatin;Procarbazine;Vincristine Sulfate,Gemcitabine;Oxaliplatin;Procarbazine;Vincristine Sulfate,Gemcitabine;Oxaliplatin;Procarbazine;Vincristine Sulfate,,
+unchanged,Gemcitabine;Oxaliplatin;Rituximab,Gemcitabine;Oxaliplatin;Rituximab,Gemcitabine;Oxaliplatin;Rituximab,,
+unchanged,Gemcitabine;Paclitaxel,Gemcitabine;Paclitaxel,Gemcitabine;Paclitaxel,,
+unchanged,Gemcitabine;Rituximab,Gemcitabine;Rituximab,Gemcitabine;Rituximab,,
+unchanged,Gemcitabine;Rituximab;Vinorelbine Tartrate,Gemcitabine;Rituximab;Vinorelbine Tartrate,Gemcitabine;Rituximab;Vinorelbine Tartrate,,
+unchanged,Gemcitabine;Vincristine Sulfate,Gemcitabine;Vincristine Sulfate,Gemcitabine;Vincristine Sulfate,,
+unchanged,Gemcitabine;Vinorelbine Tartrate,Gemcitabine;Vinorelbine Tartrate,Gemcitabine;Vinorelbine Tartrate,,
+unchanged,Glofitamab-Gxbm;Obinutuzumab,Glofitamab-Gxbm;Obinutuzumab,Glofitamab-Gxbm;Obinutuzumab,,
+unchanged,Goserelin Acetate,Goserelin Acetate,Goserelin Acetate,,
+unchanged,Goserelin Acetate;Ifosfamide,Goserelin Acetate;Ifosfamide,Goserelin Acetate;Ifosfamide,,
+unchanged,Ifosfamide,Ifosfamide,Ifosfamide,,
+unchanged,Irinotecan,Irinotecan,Irinotecan,,
+unchanged,Irinotecan;Vincristine Sulfate,Irinotecan;Vincristine Sulfate,Irinotecan;Vincristine Sulfate,,
+unchanged,Ixabepilone,Ixabepilone,Ixabepilone,,
+unchanged,Leuprolide Acetate,Leuprolide Acetate,Leuprolide Acetate,,
+unchanged,Leuprolide Acetate;Rituximab,Leuprolide Acetate;Rituximab,Leuprolide Acetate;Rituximab,,
+unchanged,Lurbinectedin,Lurbinectedin,Lurbinectedin,,
+unchanged,Mechlorethamine,Mechlorethamine,Mechlorethamine,,
+unchanged,Mechlorethamine;Methotrexate,Mechlorethamine;Methotrexate,Mechlorethamine;Methotrexate,,
+unchanged,Mechlorethamine;Vincristine Sulfate,Mechlorethamine;Vincristine Sulfate,Mechlorethamine;Vincristine Sulfate,,
+unchanged,Methotrexate,Methotrexate,Methotrexate,,
+unchanged,Methotrexate;Nelarabine;Vincristine Sulfate,Methotrexate;Nelarabine;Vincristine Sulfate,Methotrexate;Nelarabine;Vincristine Sulfate,,
+unchanged,Methotrexate;Pegaspargase;Vincristine Sulfate,Methotrexate;Pegaspargase;Vincristine Sulfate,Methotrexate;Pegaspargase;Vincristine Sulfate,,
+unchanged,Methotrexate;Procarbazine,Methotrexate;Procarbazine,Methotrexate;Procarbazine,,
+unchanged,Methotrexate;Procarbazine;Vincristine Sulfate,Methotrexate;Procarbazine;Vincristine Sulfate,Methotrexate;Procarbazine;Vincristine Sulfate,,
+unchanged,Methotrexate;Rituximab,Methotrexate;Rituximab,Methotrexate;Rituximab,,
+unchanged,Methotrexate;Rituximab;Vincristine Sulfate,Methotrexate;Rituximab;Vincristine Sulfate,Methotrexate;Rituximab;Vincristine Sulfate,,
+unchanged,Methotrexate;Vincristine Sulfate,Methotrexate;Vincristine Sulfate,Methotrexate;Vincristine Sulfate,,
+unchanged,Mitomycin,Mitomycin,Mitomycin,,
+unchanged,Obinutuzumab,Obinutuzumab,Obinutuzumab,,
+unchanged,Oxaliplatin,Oxaliplatin,Oxaliplatin,,
+unchanged,Oxaliplatin;Rituximab,Oxaliplatin;Rituximab,Oxaliplatin;Rituximab,,
+unchanged,Paclitaxel,Paclitaxel,Paclitaxel,,
+unchanged,Paclitaxel;Ramucirumab,Paclitaxel;Ramucirumab,Paclitaxel;Ramucirumab,,
+unchanged,Pegaspargase,Pegaspargase,Pegaspargase,,
+unchanged,Pemetrexed,Pemetrexed,Pemetrexed,,
+unchanged,Polatuzumab Vedotin-Piiq;Rituximab,Polatuzumab Vedotin-Piiq;Rituximab,Polatuzumab Vedotin-Piiq;Rituximab,,
+unchanged,Pralatrexate,Pralatrexate,Pralatrexate,,
+unchanged,Procarbazine,Procarbazine,Procarbazine,,
+unchanged,Procarbazine;Vinblastine,Procarbazine;Vinblastine,Procarbazine;Vinblastine,,
+unchanged,Procarbazine;Vincristine Sulfate,Procarbazine;Vincristine Sulfate,Procarbazine;Vincristine Sulfate,,
+unchanged,Ramucirumab;Vinorelbine Tartrate,Ramucirumab;Vinorelbine Tartrate,Ramucirumab;Vinorelbine Tartrate,,
+unchanged,Rituximab,Rituximab,Rituximab,,
+unchanged,Rituximab;Vincristine Sulfate,Rituximab;Vincristine Sulfate,Rituximab;Vincristine Sulfate,,
+unchanged,Romidepsin;Tafasitamab-Cxix,Romidepsin;Tafasitamab-Cxix,Romidepsin;Tafasitamab-Cxix,,
+unchanged,Sacituzumab Govitecan-Hziy,Sacituzumab Govitecan-Hziy,Sacituzumab Govitecan-Hziy,,
+unchanged,Tafasitamab-Cxix,Tafasitamab-Cxix,Tafasitamab-Cxix,,
+unchanged,Temsirolimus,Temsirolimus,Temsirolimus,,
+unchanged,Trastuzumab,Trastuzumab,Trastuzumab,,
+unchanged,Vinblastine,Vinblastine,Vinblastine,,
+unchanged,Vincristine Sulfate,Vincristine Sulfate,Vincristine Sulfate,,
+unchanged,Vinorelbine Tartrate,Vinorelbine Tartrate,Vinorelbine Tartrate,,

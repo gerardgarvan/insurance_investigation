@@ -1,0 +1,499 @@
+﻿drug_names
+Ado-Trastuzumab Emtansine;Eribulin Mesylate;Gemcitabine;Goserelin Acetate;Trastuzumab
+Ado-Trastuzumab Emtansine;Goserelin Acetate;Trastuzumab;Vinorelbine Tartrate
+Adriamycin;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Adriamycin;Bleomycin;Dacarbazine;Vinblastine
+Antineoplastic Drugs;Bendamustine;Cisplatin;Not Otherwise Classified
+Antineoplastic Drugs;Bendamustine;Not Otherwise Classified;Rituximab
+Antineoplastic Drugs;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Not Otherwise Classified;Vinblastine
+Antineoplastic Drugs;Cisplatin;Gemcitabine;Not Otherwise Classified
+Antineoplastic Drugs;Fluorouracil;Mitomycin;Not Otherwise Classified;Obinutuzumab
+Antineoplastic Drugs;Not Otherwise Classified
+Antineoplastic Drugs;Not Otherwise Classified;Rituximab
+Arsenic Trioxide
+Asparaginase;Calaspargase Pegol-Mknl;Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Nelarabine;Vincristine Sulfate
+Asparaginase;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Nelarabine;Vincristine Sulfate
+Asparaginase;Cyclophosphamide;Cytarabine;Methotrexate;Nelarabine;Pegaspargase;Vincristine Sulfate
+Asparaginase;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Nelarabine;Vincristine Sulfate
+Azacitidine
+Bcg Live Intravesical Instillation
+Bendamustine
+Bendamustine;Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate
+Bendamustine;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine
+Bendamustine;Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Bendamustine;Bortezomib;Rituximab
+Bendamustine;Carboplatin;Carmustine;Etoposide
+Bendamustine;Carboplatin;Carmustine;Etoposide;Ifosfamide
+Bendamustine;Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna
+Bendamustine;Carboplatin;Etoposide;Ifosfamide
+Bendamustine;Carboplatin;Gemcitabine
+Bendamustine;Carmustine
+Bendamustine;Carmustine;Cisplatin;Etoposide
+Bendamustine;Carmustine;Cytarabine;Etoposide
+Bendamustine;Carmustine;Etoposide
+Bendamustine;Carmustine;Etoposide;Gemcitabine
+Bendamustine;Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate
+Bendamustine;Cisplatin
+Bendamustine;Cisplatin;Cyclophosphamide;Methotrexate
+Bendamustine;Cisplatin;Etoposide
+Bendamustine;Cyclophosphamide
+Bendamustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Bendamustine;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate
+Bendamustine;Cyclophosphamide;Etoposide
+Bendamustine;Cyclophosphamide;Fludarabine Phosphate;Rituximab
+Bendamustine;Cyclophosphamide;Rituximab;Vincristine Sulfate
+Bendamustine;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine
+Bendamustine;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Bendamustine;Doxorubicin Hydrochloride
+Bendamustine;Doxorubicin Hydrochloride;Rituximab
+Bendamustine;Etoposide
+Bendamustine;Etoposide;Ifosfamide
+Bendamustine;Fludarabine Phosphate
+Bendamustine;Gemcitabine
+Bendamustine;Gemcitabine;Methotrexate
+Bendamustine;Gemcitabine;Oxaliplatin
+Bendamustine;Gemcitabine;Oxaliplatin;Polatuzumab Vedotin-Piiq;Rituximab
+Bendamustine;Gemcitabine;Rituximab
+Bendamustine;Gemcitabine;Vinorelbine Tartrate
+Bendamustine;Ifosfamide;Polatuzumab Vedotin-Piiq;Rituximab
+Bendamustine;Methotrexate
+Bendamustine;Methotrexate;Polatuzumab Vedotin-Piiq;Rituximab
+Bendamustine;Methotrexate;Rituximab
+Bendamustine;Obinutuzumab
+Bendamustine;Pemetrexed;Rituximab
+Bendamustine;Polatuzumab Vedotin-Piiq
+Bendamustine;Polatuzumab Vedotin-Piiq;Rituximab
+Bendamustine;Rituximab
+Bendamustine;Vinblastine
+Bevacizumab
+Bevacizumab;Bleomycin
+Bevacizumab;Carboplatin
+Bevacizumab;Carboplatin;Cyclophosphamide;Etoposide
+Bevacizumab;Carboplatin;Paclitaxel
+Bevacizumab;Carboplatin;Pemetrexed
+Bevacizumab;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate
+Bevacizumab;Cytarabine
+Bevacizumab;Fluorouracil
+Bevacizumab;Fluorouracil;Irinotecan
+Bevacizumab;Fluorouracil;Irinotecan;Oxaliplatin
+Bevacizumab;Fluorouracil;Oxaliplatin
+Bevacizumab;Gemcitabine
+Bevacizumab;Gemcitabine;Paclitaxel
+Bevacizumab;Irinotecan
+Bevacizumab;Methotrexate;Procarbazine
+Bleomycin
+Bleomycin;Carboplatin;Carmustine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine
+Bleomycin;Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate
+Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine
+Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna
+Bleomycin;Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine
+Bleomycin;Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine
+Bleomycin;Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Bleomycin;Cisplatin;Etoposide
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna;Procarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Mesna;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Rituximab;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Paclitaxel;Vinblastine
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Procarbazine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate
+Bleomycin;Cyclophosphamide;Etoposide;Procarbazine;Vincristine Sulfate
+Bleomycin;Dacarbazine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Oxaliplatin;Rituximab;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Procarbazine;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Ifosfamide;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Oxaliplatin;Rituximab
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Goserelin Acetate;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Leuprolide Acetate;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Mechlorethamine;Vincristine Sulfate
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Mesna;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Methotrexate;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Procarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Thiotepa;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Bleomycin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate
+Bleomycin;Dacarbazine;Vinblastine
+Bleomycin;Dacarbazine;Vinblastine;Vincristine Sulfate
+Bleomycin;Doxorubicin Hydrochloride
+Bleomycin;Doxorubicin Hydrochloride;Etoposide;Mechlorethamine;Vinblastine;Vincristine Sulfate
+Bleomycin;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate
+Bleomycin;Doxorubicin Hydrochloride;Vinblastine
+Bleomycin;Doxorubicin Hydrochloride;Vincristine Sulfate
+Bleomycin;Etoposide;Vincristine Sulfate
+Bleomycin;Gemcitabine;Vincristine Sulfate
+Bleomycin;Methotrexate;Vinblastine
+Bleomycin;Procarbazine;Vincristine Sulfate
+Bleomycin;Vinblastine
+Bleomycin;Vincristine Sulfate
+Blinatumomab
+Bortezomib
+Bortezomib;Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate
+Bortezomib;Cyclophosphamide
+Bortezomib;Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab
+Bortezomib;Cyclophosphamide;Rituximab;Vincristine Sulfate
+Bortezomib;Daratumumab;Methotrexate
+Bortezomib;Gemcitabine;Oxaliplatin
+Bortezomib;Gemcitabine;Rituximab
+Bortezomib;Rituximab
+Cabazitaxel;Cetuximab;Fluorouracil;Irinotecan
+Carboplatin
+Carboplatin;Carmustine;Cytarabine;Etoposide;Ifosfamide;Mesna
+Carboplatin;Carmustine;Etoposide
+Carboplatin;Carmustine;Etoposide;Ifosfamide
+Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna
+Carboplatin;Carmustine;Etoposide;Ifosfamide;Mesna;Rituximab
+Carboplatin;Cetuximab;Cisplatin;Gemcitabine
+Carboplatin;Cisplatin
+Carboplatin;Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate
+Carboplatin;Cisplatin;Etoposide
+Carboplatin;Cisplatin;Etoposide;Gemcitabine;Ifosfamide
+Carboplatin;Cisplatin;Gemcitabine;Paclitaxel
+Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Methotrexate;Rituximab;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Methotrexate;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Ifosfamide;Mesna;Oxaliplatin;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Paclitaxel
+Carboplatin;Cyclophosphamide;Etoposide
+Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide
+Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Mesna;Vincristine Sulfate
+Carboplatin;Cyclophosphamide;Etoposide;Ifosfamide;Vincristine Sulfate
+Carboplatin;Cytarabine;Etoposide;Ifosfamide;Mesna;Rituximab
+Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Mesna;Vinblastine
+Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vinblastine
+Carboplatin;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vinblastine
+Carboplatin;Docetaxel
+Carboplatin;Docetaxel;Fluorouracil
+Carboplatin;Docetaxel;Paclitaxel
+Carboplatin;Docetaxel;Pertuzumab;Trastuzumab
+Carboplatin;Doxorubicin Hydrochloride
+Carboplatin;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate
+Carboplatin;Doxorubicin Hydrochloride;Etoposide;Ifosfamide
+Carboplatin;Eribulin Mesylate;Gemcitabine;Sacituzumab Govitecan-Hziy
+Carboplatin;Etoposide
+Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna
+Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Mesna;Vinorelbine Tartrate
+Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin
+Carboplatin;Etoposide;Gemcitabine;Ifosfamide;Oxaliplatin;Romidepsin
+Carboplatin;Etoposide;Ifosfamide
+Carboplatin;Etoposide;Ifosfamide;Mesna
+Carboplatin;Etoposide;Ifosfamide;Mesna;Rituximab
+Carboplatin;Etoposide;Ifosfamide;Methotrexate
+Carboplatin;Etoposide;Ifosfamide;Rituximab
+Carboplatin;Etoposide;Methotrexate
+Carboplatin;Fluorouracil;Mitomycin
+Carboplatin;Fluorouracil;Oxaliplatin;Paclitaxel
+Carboplatin;Gemcitabine
+Carboplatin;Gemcitabine;Rituximab
+Carboplatin;Ifosfamide
+Carboplatin;Ifosfamide;Mesna
+Carboplatin;Ifosfamide;Mesna;Paclitaxel
+Carboplatin;Lurbinectedin
+Carboplatin;Methotrexate
+Carboplatin;Paclitaxel
+Carboplatin;Paclitaxel;Pemetrexed
+Carboplatin;Pemetrexed
+Carboplatin;Pemetrexed;Vinorelbine Tartrate
+Carboplatin;Vinorelbine Tartrate
+Carfilzomib;Carmustine;Cyclophosphamide;Etoposide
+Carfilzomib;Daratumumab
+Carfilzomib;Rituximab
+Carmustine
+Carmustine;Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Carmustine;Cisplatin;Etoposide;Gemcitabine;Ifosfamide
+Carmustine;Cisplatin;Etoposide;Methotrexate;Rituximab
+Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Oxaliplatin
+Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate
+Carmustine;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate
+Carmustine;Cyclophosphamide;Etoposide
+Carmustine;Cytarabine;Etoposide
+Carmustine;Cytarabine;Etoposide;Gemcitabine;Melphalan;Vinorelbine Tartrate
+Carmustine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine
+Carmustine;Doxorubicin Hydrochloride;Etoposide
+Carmustine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine
+Carmustine;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Vinorelbine Tartrate
+Carmustine;Etoposide
+Carmustine;Etoposide;Gemcitabine
+Carmustine;Etoposide;Gemcitabine;Oxaliplatin
+Carmustine;Etoposide;Gemcitabine;Vinorelbine Tartrate
+Carmustine;Etoposide;Ifosfamide
+Carmustine;Etoposide;Leuprolide Acetate
+Carmustine;Etoposide;Rituximab
+Carmustine;Methotrexate
+Carmustine;Methotrexate;Vincristine Sulfate
+Cetuximab
+Cetuximab;Cisplatin;Docetaxel;Fluorouracil
+Cetuximab;Fluorouracil;Irinotecan
+Cetuximab;Gemcitabine;Paclitaxel
+Cetuximab;Irinotecan
+Cisplatin
+Cisplatin;Cyclophosphamide
+Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Mesna;Vincristine Sulfate
+Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate
+Cisplatin;Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate
+Cisplatin;Cyclophosphamide;Etoposide
+Cisplatin;Cyclophosphamide;Etoposide;Ifosfamide
+Cisplatin;Cyclophosphamide;Etoposide;Vincristine Sulfate
+Cisplatin;Cyclophosphamide;Fludarabine Phosphate;Rituximab
+Cisplatin;Cytarabine
+Cisplatin;Cytarabine;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab
+Cisplatin;Cytarabine;Etoposide;Fludarabine Phosphate;Mitoxantrone;Oxaliplatin
+Cisplatin;Cytarabine;Etoposide;Rituximab
+Cisplatin;Cytarabine;Etoposide;Vinblastine
+Cisplatin;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Cisplatin;Doxorubicin Hydrochloride
+Cisplatin;Etoposide
+Cisplatin;Etoposide;Gemcitabine
+Cisplatin;Fluorouracil
+Cisplatin;Gemcitabine
+Cisplatin;Gemcitabine;Methotrexate
+Cisplatin;Gemcitabine;Rituximab
+Cisplatin;Ifosfamide;Mesna;Paclitaxel
+Cisplatin;Pemetrexed
+Cladribine
+Copanlisib;Rituximab
+Cyclophosphamide
+Cyclophosphamide;Cytarabine;Daunorubicin;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Daunorubicin;Etoposide;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate
+Cyclophosphamide;Cytarabine;Fludarabine Phosphate;Methotrexate
+Cyclophosphamide;Cytarabine;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine;Vincristine Sulfate
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate
+Cyclophosphamide;Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate
+Cyclophosphamide;Daunorubicin;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cyclophosphamide;Docetaxel
+Cyclophosphamide;Docetaxel;Goserelin Acetate
+Cyclophosphamide;Docetaxel;Leuprolide Acetate
+Cyclophosphamide;Doxorubicin Hydrochloride
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Gemcitabine;Romidepsin
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Methotrexate;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Ifosfamide;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Methotrexate;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Procarbazine
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Fluorouracil;Paclitaxel
+Cyclophosphamide;Doxorubicin Hydrochloride;Gemcitabine;Oxaliplatin;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Goserelin Acetate;Rituximab
+Cyclophosphamide;Doxorubicin Hydrochloride;Methotrexate;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Paclitaxel;Trastuzumab
+Cyclophosphamide;Doxorubicin Hydrochloride;Pemetrexed;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Pralatrexate;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab
+Cyclophosphamide;Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Doxorubicin Hydrochloride;Vincristine Sulfate
+Cyclophosphamide;Epirubicin;Fluorouracil;Paclitaxel
+Cyclophosphamide;Etoposide
+Cyclophosphamide;Etoposide;Fludarabine Phosphate;Ifosfamide
+Cyclophosphamide;Etoposide;Fluorouracil;Irinotecan;Vincristine Sulfate
+Cyclophosphamide;Etoposide;Gemcitabine;Ifosfamide
+Cyclophosphamide;Etoposide;Gemcitabine;Vincristine Sulfate
+Cyclophosphamide;Etoposide;Ifosfamide;Methotrexate;Rituximab
+Cyclophosphamide;Etoposide;Irinotecan;Vincristine Sulfate
+Cyclophosphamide;Etoposide;Methotrexate
+Cyclophosphamide;Etoposide;Procarbazine
+Cyclophosphamide;Etoposide;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Etoposide;Vincristine Sulfate
+Cyclophosphamide;Fludarabine Phosphate
+Cyclophosphamide;Fludarabine Phosphate;Gemcitabine;Oxaliplatin;Rituximab
+Cyclophosphamide;Fludarabine Phosphate;Rituximab
+Cyclophosphamide;Fludarabine Phosphate;Tafasitamab-Cxix
+Cyclophosphamide;Gemcitabine;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Gemcitabine;Vincristine Sulfate
+Cyclophosphamide;Gemcitabine;Vinorelbine Tartrate
+Cyclophosphamide;Methotrexate
+Cyclophosphamide;Methotrexate;Rituximab
+Cyclophosphamide;Methotrexate;Vincristine Sulfate
+Cyclophosphamide;Mitoxantrone;Rituximab
+Cyclophosphamide;Obinutuzumab;Vincristine Sulfate
+Cyclophosphamide;Procarbazine
+Cyclophosphamide;Procarbazine;Vincristine Sulfate
+Cyclophosphamide;Rituximab
+Cyclophosphamide;Rituximab;Vinblastine
+Cyclophosphamide;Rituximab;Vincristine Sulfate
+Cyclophosphamide;Vinblastine
+Cyclophosphamide;Vincristine Sulfate
+Cytarabine
+Cytarabine;Daratumumab;Methotrexate
+Cytarabine;Daunorubicin;Etoposide
+Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate
+Cytarabine;Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate
+Cytarabine;Etoposide;Melphalan
+Cytarabine;Etoposide;Vincristine Sulfate
+Cytarabine;Loncastuximab Tesirine-Lpyl;Methotrexate
+Cytarabine;Mesna;Methotrexate
+Cytarabine;Methotrexate
+Cytarabine;Methotrexate;Nelarabine
+Cytarabine;Methotrexate;Oxaliplatin;Rituximab
+Cytarabine;Methotrexate;Rituximab
+Cytarabine;Methotrexate;Vincristine Sulfate
+Cytarabine;Procarbazine
+Cytarabine;Rituximab;Vincristine Sulfate
+Cytarabine;Vincristine Sulfate
+Dacarbazine
+Dacarbazine;Docetaxel;Gemcitabine
+Dacarbazine;Doxorubicin Hydrochloride
+Dacarbazine;Doxorubicin Hydrochloride;Etoposide
+Dacarbazine;Doxorubicin Hydrochloride;Etoposide;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Gemcitabine;Vinblastine;Vinorelbine Tartrate
+Dacarbazine;Doxorubicin Hydrochloride;Goserelin Acetate;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Leuprolide Acetate;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Methotrexate
+Dacarbazine;Doxorubicin Hydrochloride;Methotrexate;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Rituximab;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Vinblastine
+Dacarbazine;Doxorubicin Hydrochloride;Vinblastine;Vincristine Sulfate
+Dacarbazine;Doxorubicin Hydrochloride;Vincristine Sulfate
+Dacarbazine;Vinblastine
+Daratumumab
+Daunorubicin;Methotrexate;Pegaspargase
+Docetaxel
+Docetaxel;Floxuridine;Rituximab
+Docetaxel;Gemcitabine
+Docetaxel;Gemcitabine;Ramucirumab
+Docetaxel;Gemcitabine;Ramucirumab;Vinorelbine Tartrate
+Docetaxel;Leuprolide Acetate
+Docetaxel;Pemetrexed;Ramucirumab
+Docetaxel;Pertuzumab;Trastuzumab
+Docetaxel;Pertuzumab;Trastuzumab;Vinorelbine Tartrate
+Doxorubicin Hydrochloride
+Doxorubicin Hydrochloride;Etoposide;Rituximab;Vincristine Sulfate
+Doxorubicin Hydrochloride;Etoposide;Vincristine Sulfate
+Doxorubicin Hydrochloride;Gemcitabine
+Doxorubicin Hydrochloride;Gemcitabine;Ifosfamide
+Doxorubicin Hydrochloride;Gemcitabine;Rituximab;Vinorelbine Tartrate
+Doxorubicin Hydrochloride;Gemcitabine;Vinorelbine Tartrate
+Doxorubicin Hydrochloride;Ifosfamide
+Doxorubicin Hydrochloride;Methotrexate
+Doxorubicin Hydrochloride;Methotrexate;Pegaspargase;Vincristine Sulfate
+Doxorubicin Hydrochloride;Methotrexate;Vinblastine
+Doxorubicin Hydrochloride;Methotrexate;Vincristine Sulfate
+Doxorubicin Hydrochloride;Rituximab
+Doxorubicin Hydrochloride;Rituximab;Vincristine Sulfate
+Doxorubicin Hydrochloride;Vinblastine
+Doxorubicin Hydrochloride;Vincristine Sulfate
+Epcoritamab-Bysp
+Eribulin Mesylate
+Eribulin Mesylate;Paclitaxel
+Etoposide
+Etoposide;Gemcitabine;Vinblastine
+Etoposide;Gemcitabine;Vinorelbine Tartrate
+Etoposide;Ifosfamide
+Etoposide;Ifosfamide;Mesna
+Etoposide;Ifosfamide;Methotrexate
+Etoposide;Methotrexate
+Etoposide;Rituximab
+Etoposide;Vinblastine
+Fam-Trastuzumab Deruxtecan-Nxki;Goserelin Acetate;Paclitaxel
+Fam-Trastuzumab Deruxtecan-Nxki;Thiotepa;Topotecan
+Fludarabine Phosphate
+Fluorouracil
+Fluorouracil;Gemcitabine;Paclitaxel
+Fluorouracil;Irinotecan
+Fluorouracil;Irinotecan;Oxaliplatin
+Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel
+Fluorouracil;Irinotecan;Oxaliplatin;Paclitaxel;Ramucirumab
+Fluorouracil;Mitomycin
+Fluorouracil;Oxaliplatin
+Fulvestrant
+Gemcitabine
+Gemcitabine;Ifosfamide
+Gemcitabine;Mechlorethamine;Oxaliplatin;Vinblastine;Vincristine Sulfate
+Gemcitabine;Methotrexate
+Gemcitabine;Methotrexate;Oxaliplatin;Rituximab
+Gemcitabine;Oxaliplatin
+Gemcitabine;Oxaliplatin;Procarbazine;Vincristine Sulfate
+Gemcitabine;Oxaliplatin;Rituximab
+Gemcitabine;Paclitaxel
+Gemcitabine;Rituximab
+Gemcitabine;Rituximab;Vinorelbine Tartrate
+Gemcitabine;Vincristine Sulfate
+Gemcitabine;Vinorelbine Tartrate
+Glofitamab-Gxbm;Obinutuzumab
+Goserelin Acetate
+Goserelin Acetate;Ifosfamide
+Ifosfamide
+Irinotecan
+Irinotecan;Vincristine Sulfate
+Ixabepilone
+Leuprolide Acetate
+Leuprolide Acetate;Rituximab
+Lurbinectedin
+Mechlorethamine
+Mechlorethamine;Methotrexate
+Mechlorethamine;Vincristine Sulfate
+Methotrexate
+Methotrexate;Nelarabine;Vincristine Sulfate
+Methotrexate;Pegaspargase;Vincristine Sulfate
+Methotrexate;Procarbazine
+Methotrexate;Procarbazine;Vincristine Sulfate
+Methotrexate;Rituximab
+Methotrexate;Rituximab;Vincristine Sulfate
+Methotrexate;Vincristine Sulfate
+Mitomycin
+Obinutuzumab
+Obinutuzumab;Rituximab
+Ofatumumab;Paclitaxel;Rituximab
+Oxaliplatin
+Oxaliplatin;Rituximab
+Paclitaxel
+Paclitaxel;Ramucirumab
+Pegaspargase
+Pemetrexed
+Polatuzumab Vedotin-Piiq;Rituximab
+Pralatrexate
+Procarbazine
+Procarbazine;Vinblastine
+Procarbazine;Vincristine Sulfate
+Ramucirumab;Vinorelbine Tartrate
+Rituximab
+Rituximab;Vincristine Sulfate
+Romidepsin;Tafasitamab-Cxix
+Sacituzumab Govitecan-Hziy
+Tafasitamab-Cxix
+Temsirolimus
+Trastuzumab
+Vinblastine
+Vincristine Sulfate
+Vinorelbine Tartrate

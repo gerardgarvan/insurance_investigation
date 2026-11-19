@@ -260,7 +260,8 @@ investigation_scripts <- c(
   "R/187_anthracycline_exposure.R",          # Anthracycline exposure variables (Phase 187); patient-grain flags (any_anthracycline, last_anthracycline_date, years_since); internal RDS + aggregate workbook; ANTH-01, ANTH-02, ANTH-03
   "R/188_echo_rate_since_anthracycline.R",   # Echo rate since last anthracycline dose (Phase 188); encounter-grain dedup + window labeling; Anchor Comparison vs Phase 166; ECHO-01, ECHO-02
   "R/207_radiation_gap_probe.R",             # W-RAD (quick 261114-uzz): radiation-like evidence for registry-radiation patients without a pipeline Radiation/Proton episode; findings only
-  "R/208_site_treatment_data_completeness.R" # W-NOTX (quick 261114-uzz): per-site treatment-table completeness vs R/203 no-treatment %; analysis only
+  "R/208_site_treatment_data_completeness.R", # W-NOTX (quick 261114-uzz): per-site treatment-table completeness vs R/203 no-treatment %; analysis only
+  "R/214_combo_change_audit.R"               # Phase 214: chemo combination change audit (old vs new Gantt); analysis only; COMBO-01..07
 )
 
 for (script in investigation_scripts) {

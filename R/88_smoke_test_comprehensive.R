@@ -8564,6 +8564,17 @@ check("R/52 and R/142 call filter_gantt_to_cohort before writing (Phase 213 coho
 check("R/tools/213_chain_checks.R defines chk_gantt_cohort_only (Phase 213)",
       grepl("chk_gantt_cohort_only <- function", p213_rd("R/tools/213_chain_checks.R"), fixed = TRUE))
 
+# Phase 214 (COMBO-07): chemo combination change audit -- one structural check
+p214_s <- p213_rd("R/214_combo_change_audit.R")
+p214_u <- p213_rd("R/utils/utils_combo_audit.R")
+check("R/214 exists, parses, R/utils/utils_combo_audit.R defines its helpers, and R/214 pins R214_* env vars (Phase 214)",
+      nzchar(p214_s) && !inherits(try(parse(text = p214_s), silent = TRUE), "try-error") &&
+        all(vapply(c("normalise_combo <- function", "classify_combos <- function", "match_episodes <- function",
+                     "attribute_cause <- function", "rollup_cause <- function"),
+                   function(x) grepl(x, p214_u, fixed = TRUE), logical(1))) &&
+        all(vapply(c("R214_OLD_GANTT", "R214_NEW_GANTT", "R214_OLD_COMBOS", "R214_NEW_COMBOS", "R214_CHANGE_LIST"),
+                   function(x) grepl(x, p214_s, fixed = TRUE), logical(1))))
+
 # ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================
