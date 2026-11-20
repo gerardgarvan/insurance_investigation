@@ -190,6 +190,12 @@ CONFIG <- list(
   # Staged as data/reference/zip9_bg_centroid_crosswalk.csv on HiPerGator.
   zip9_bg_centroid_path = file.path(.reference_dir, "zip9_bg_centroid_crosswalk.csv"),
 
+  # Phase 215: histology description references (see data/reference/README.md).
+  # ICD-O-3 term list (NAACCR V27 Histology3; columns Value, strHistologyBehaviour,
+  # Preferred, label) and ICD-O-2 -> ICD-O-3 conversion table (CONV2TO3).
+  icdo3_histology_terms_path = file.path(.reference_dir, "Histology3_v27_20260821.xlsx"),
+  icdo2_to_icdo3_path        = file.path(.reference_dir, "icdo2_to_icdo3_conversion.csv"),
+
   # Directory holding the 51 per-state Neighborhood Atlas ZIP+4 CSV files.
   # UNCONFIRMED PATH — must be verified on HiPerGator before running R/122a:
   #   ls /blue/erin.mobley.precision/

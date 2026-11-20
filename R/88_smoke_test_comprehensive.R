@@ -8575,6 +8575,21 @@ check("R/214 exists, parses, R/utils/utils_combo_audit.R defines its helpers, an
         all(vapply(c("R214_OLD_GANTT", "R214_NEW_GANTT", "R214_OLD_COMBOS", "R214_NEW_COMBOS", "R214_CHANGE_LIST"),
                    function(x) grepl(x, p214_s, fixed = TRUE), logical(1))))
 
+# Phase 215: histology code descriptions -- structural check (row-count and coverage
+# guards live in R/215 as stopifnot(); they need TUMOR_REGISTRY_ALL, so run on HiPerGator)
+p215_s <- p213_rd("R/215_tr_histology_descriptions.R")
+p215_u <- p213_rd("R/utils/utils_cancer.R")
+p215_c <- p213_rd("R/00_config.R")
+check("R/215 parses, keeps its row-count/coverage guards; describe_histology + lookup builder defined; config has both reference paths (Phase 215)",
+      nzchar(p215_s) && !inherits(try(parse(text = p215_s), silent = TRUE), "try-error") &&
+        grepl("stopifnot(nrow(st2) == n_stacked)", p215_s, fixed = TRUE) &&
+        grepl("stopifnot(sum(cnt$rows_n) == n_stacked)", p215_s, fixed = TRUE) &&
+        all(vapply(c("describe_histology <- function", "build_histology_lookup <- function",
+                     "load_histology_lookup <- function"),
+                   function(x) grepl(x, p215_u, fixed = TRUE), logical(1))) &&
+        all(vapply(c("icdo3_histology_terms_path", "icdo2_to_icdo3_path"),
+                   function(x) grepl(x, p215_c, fixed = TRUE), logical(1))))
+
 # ==============================================================================
 # SECTION 16: SUMMARY ----
 # ==============================================================================

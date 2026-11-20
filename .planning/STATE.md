@@ -124,6 +124,7 @@ Last activity: 2026-11-14 - Completed quick task 261114-mpi: Remove RUN_PRE201B_
 
 ### Roadmap Evolution
 
+- Phase 215 added (v3.15): Histology code descriptions (tumor registry), 2026-11-20. CONTEXT + PLAN from phase_inbox/; script R/215_tr_histology_descriptions.R; HiPerGator run PENDING. Local work done (tests pass); plan 215-01 incomplete: term-list xlsx still in phase_inbox/ (move to data/reference/), R/215 run PENDING HIPERGATOR.
 - Phase 214 added (v3.15): Chemo combination change audit, old vs new Gantt (2026-11-19). CONTEXT + 2 PLANs written; reference CSVs missing locally (A-214-02); plan 02 PENDING HIPERGATOR. Plan 214-01 complete locally 2026-11-19 (314/161/29/21 confirmed on reference CSVs; 214-02 incomplete, PENDING HIPERGATOR).
 - Phase 192.1 inserted after Phase 192: Rebase v3.13 to the revised Analytic Manual (URGENT)
 - Phase 192.2 inserted after Phase 192.1: ICD-9 autoimmune codes in Gantt episodes (URGENT)

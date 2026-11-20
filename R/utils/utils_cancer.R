@@ -495,3 +495,133 @@ build_tr_treatment_flags <- function(ids = NULL, sources = c("UFH", "ORL"),
 # ENCOUNTER.ADMIT_DATE values before this date are sentinels (e.g. 1901-01-01),
 # not real encounters. Excluded from first/last-encounter computations.
 ENC_DATE_SENTINEL_BEFORE <- as.Date("1990-01-01")
+
+# ==============================================================================
+# Phase 215: histology code descriptions (ICD-O-3 term list + ICD-O-2 conversion)
+# ==============================================================================
+
+#' Build the histology lookup tables from the reference files' contents.
+#'
+#' Pure function (no file access) so tests can pass small in-test tables.
+#' Term list rule: keep rows with Preferred == TRUE; one row per
+#' Value + strHistologyBehaviour (stops on duplicates). The 4-digit lookup keeps one
+#' row per Value: behavior 3 when present, otherwise the lowest behavior digit.
+#'
+#' @param terms data frame with Value, strHistologyBehaviour, Preferred, label
+#' @param conv  data frame with icdo2_code5, icdo3_code5, site, site_dependent
+#' @return list(l5, l4, conv)
+build_histology_lookup <- function(terms, conv) {
+  need_t <- c("Value", "strHistologyBehaviour", "Preferred", "label")
+  need_c <- c("icdo2_code5", "icdo3_code5", "site")
+  if (length(setdiff(need_t, names(terms))) > 0L)
+    stop("build_histology_lookup: term list missing columns: ",
+         paste(setdiff(need_t, names(terms)), collapse = ", "))
+  if (length(setdiff(need_c, names(conv))) > 0L)
+    stop("build_histology_lookup: conversion table missing columns: ",
+         paste(setdiff(need_c, names(conv)), collapse = ", "))
+
+  pref <- terms[toupper(as.character(terms$Preferred)) == "TRUE", , drop = FALSE]
+  l5 <- dplyr::tibble(
+    hist4       = trimws(as.character(pref$Value)),
+    behavior    = trimws(as.character(pref$strHistologyBehaviour)),
+    description = trimws(as.character(pref$label))
+  )
+  l5$key5 <- paste0(l5$hist4, l5$behavior)
+  if (anyDuplicated(l5$key5) > 0L)
+    stop("build_histology_lookup: duplicate preferred terms for key(s): ",
+         paste(utils::head(unique(l5$key5[duplicated(l5$key5)]), 5L), collapse = ", "))
+
+  l4 <- l5[order(l5$hist4, l5$behavior != "3", l5$behavior), , drop = FALSE]
+  l4 <- l4[!duplicated(l4$hist4), , drop = FALSE]
+
+  cv <- dplyr::tibble(
+    icdo2_code5 = trimws(as.character(conv$icdo2_code5)),
+    icdo3_code5 = trimws(as.character(conv$icdo3_code5)),
+    site        = toupper(trimws(dplyr::coalesce(as.character(conv$site), "")))
+  )
+  list(l5 = l5, l4 = l4, conv = cv)
+}
+
+# Cached loader for the lookup built from the CONFIG reference paths.
+.histology_lookup_cache <- new.env(parent = emptyenv())
+
+#' Load (and cache) the histology lookup from CONFIG$icdo3_histology_terms_path and
+#' CONFIG$icdo2_to_icdo3_path. Stops if either file is missing.
+load_histology_lookup <- function() {
+  if (!is.null(.histology_lookup_cache$lookup)) return(.histology_lookup_cache$lookup)
+  tp <- CONFIG$icdo3_histology_terms_path
+  cp <- CONFIG$icdo2_to_icdo3_path
+  for (p in c(tp, cp)) if (!file.exists(p)) stop("load_histology_lookup: missing reference file: ", p)
+  terms <- readxl::read_excel(tp, col_types = "text")
+  conv  <- utils::read.csv(cp, colClasses = "character", na.strings = character(0),
+                           stringsAsFactors = FALSE)
+  .histology_lookup_cache$lookup <- build_histology_lookup(terms, conv)
+  .histology_lookup_cache$lookup
+}
+
+#' Describe ICD-O histology codes.
+#'
+#' Returns one row per element of `code`, in input order, with columns
+#' raw_code, hist4, behavior, icdo3_code, description, desc_source, match_level.
+#' desc_source: icdo3 | icdo3_via_icdo2_conversion | unmatched
+#' (extract_fallback is applied by the calling script, D-08).
+#' match_level: "5digit", "4digit" (behavior digit absent or not paired with this
+#' histology in the term list; description is the 4-digit-level term), or NA.
+#'
+#' Order for a 5-digit code: exact ICD-O-3 key; ICD-O-2 conversion (site-specific row
+#' when `site` matches, else the non-site row; D-05); 4-digit ICD-O-3 term.
+#' A 4-digit code uses the 4-digit lookup only. Other shapes are unmatched (D-06).
+#'
+#' @param code character vector of codes (NA allowed)
+#' @param site optional vector (recycled) of registry primary-site codes
+#' @param lookup optional list from build_histology_lookup(); default load_histology_lookup()
+#' @return tibble with length(code) rows
+describe_histology <- function(code, site = NULL, lookup = NULL) {
+  if (is.null(lookup)) lookup <- load_histology_lookup()
+  n <- length(code)
+  raw <- as.character(code)
+  site_n <- if (is.null(site)) rep(NA_character_, n) else rep_len(as.character(site), n)
+  site_n <- substr(toupper(gsub("[^A-Za-z0-9]", "", site_n)), 1L, 3L)
+
+  norm  <- gsub("/", "", trimws(raw), fixed = TRUE)
+  valid <- !is.na(norm) & grepl("^[0-9]{4}([0-9])?$", norm)
+  hist4 <- ifelse(valid, substr(norm, 1L, 4L), NA_character_)
+  beh   <- ifelse(valid & nchar(norm) == 5L, substr(norm, 5L, 5L), NA_character_)
+
+  icdo3_code <- rep(NA_character_, n); description <- rep(NA_character_, n)
+  source <- rep("unmatched", n); level <- rep(NA_character_, n)
+
+  # 1. exact 5-digit ICD-O-3 key
+  i5 <- match(norm, lookup$l5$key5)
+  hit <- valid & !is.na(beh) & !is.na(i5)
+  icdo3_code[hit] <- norm[hit]; description[hit] <- lookup$l5$description[i5[hit]]
+  source[hit] <- "icdo3"; level[hit] <- "5digit"
+
+  # 2. ICD-O-2 conversion for remaining 5-digit codes
+  todo <- which(valid & !is.na(beh) & source == "unmatched")
+  for (k in todo) {
+    rows <- which(lookup$conv$icdo2_code5 == norm[k])
+    if (length(rows) == 0L) next
+    sel <- integer(0)
+    if (!is.na(site_n[k]) && nzchar(site_n[k]))
+      sel <- rows[lookup$conv$site[rows] == site_n[k]]
+    if (length(sel) == 0L) sel <- rows[lookup$conv$site[rows] == ""]
+    if (length(sel) == 0L) next
+    tgt <- lookup$conv$icdo3_code5[sel[1L]]
+    j <- match(tgt, lookup$l5$key5)
+    if (is.na(j)) next
+    icdo3_code[k] <- tgt; description[k] <- lookup$l5$description[j]
+    source[k] <- "icdo3_via_icdo2_conversion"; level[k] <- "5digit"
+  }
+
+  # 3. 4-digit ICD-O-3 term (4-digit input, or 5-digit with unpaired behavior)
+  todo <- which(valid & source == "unmatched")
+  i4 <- match(hist4[todo], lookup$l4$hist4)
+  ok <- !is.na(i4)
+  icdo3_code[todo[ok]] <- hist4[todo[ok]]
+  description[todo[ok]] <- lookup$l4$description[i4[ok]]
+  source[todo[ok]] <- "icdo3"; level[todo[ok]] <- "4digit"
+
+  dplyr::tibble(raw_code = raw, hist4 = hist4, behavior = beh, icdo3_code = icdo3_code,
+                description = description, desc_source = source, match_level = level)
+}

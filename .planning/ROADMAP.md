@@ -1218,6 +1218,18 @@ Plans:
 - [ ] 214-01-PLAN.md - helpers, R/214 script, testthat fixtures, registration (local)
 - [ ] 214-02-PLAN.md - HiPerGator run and review, PENDING HIPERGATOR
 
+### Phase 215: Histology Code Descriptions (tumor registry)
+**Goal**: Every tumor-registry histology code has a complete ICD-O-3 description (with ICD-O-2 conversion fallback), so registry rows can be read without manual lookup.
+**Depends on**: Phase 214 (numbering only; no data dependency)
+**Requirements**: none assigned (see 215-CONTEXT.md D-01 to D-08)
+**Success Criteria**:
+  1. describe_histology() returns one row per input, with desc_source in icdo3 / icdo3_via_icdo2_conversion / extract_fallback / unmatched
+  2. R/215 writes output/tr_histology_code_descriptions.csv and output/tr_histology_unmatched.csv (HiPerGator: PENDING)
+  3. ICD_CODES$hl_histology / nhl_histology and cohort rules unchanged
+**Plans**: 1 plan
+Plans:
+- [ ] 215-01-PLAN.md - lookup, describe_histology(), R/215 script, tests (local); HiPerGator run PENDING
+
 ## Progress Table (v3.15)
 
 | Phase | Plans Complete | Status | Completed |
@@ -1227,3 +1239,4 @@ Plans:
 | 212. Cohort Rule Change | 5/5 | Complete | 2026-11-17 |
 | 213. Chain Rerun + R/88 | 5/5 | Complete | 2026-11-17 |
 | 214. Combo Change Audit | 0/2 | Planned | - |
+| 215. Histology Code Descriptions | 0/1 | Planned | - |
